@@ -26,6 +26,7 @@ from localizer_2d_utils import (
     get_binary_image
 )
 import cv2
+import os
 
 SEARCH_GRID_RESOLUTION = 4  # 0.2m
 BEAM_SEARCH_KERNEL_SIZE = 2
@@ -33,13 +34,18 @@ BEAM_NOICE_VARIANCE = 0.1  # in meter
 NUM_ANGULAR_SEG = 128
 TEMPLATE_MATCHING_THRESHOLD = 0.25
 
+def get_file_path_in_the_same_folder(filename):
+    # To get the full, absolute file path
+    absolute_file_path = os.path.abspath(__file__)
+    dir_name = os.path.dirname(absolute_file_path)
+    return os.path.join(dir_name, filename)
 
-def load_map_and_meta_data(path):
+def load_map_and_meta_data(img_path, metadata_path):
     # Replace 'map.yaml' with the path to your uploaded YAML file
-    with open(path + ".yaml", "r") as file:
+    with open(metadata_path, "r") as file:
         map_metadata = yaml.safe_load(file)
     # Replace 'map.pgm' with the path to your uploaded PGM file
-    map_image = mpimg.imread(path + ".pgm")
+    map_image = mpimg.imread(img_path)
     return map_metadata, map_image
 
 
@@ -216,9 +222,10 @@ def template_matching_cuda(img, template):
 
 
 if __name__ == "__main__":
-    map_metadata, map_image = load_map_and_meta_data("/home/rjia/Videos/bird_world")
+    map_metadata, map_image = load_map_and_meta_data(get_file_path_in_the_same_folder("bird_world.pgm"),
+                                                     get_file_path_in_the_same_folder("bird_world.yaml"))
     map_image = rgba_to_grayscale(map_image)
-    all_data = load_scan_messages("/home/rjia/Videos/scan_data.pkl")
+    all_data = load_scan_messages(get_file_path_in_the_same_folder("scan_data.pkl"))
     img_gradient = get_gradient_mat(map_image)
     resolution = map_metadata["resolution"]
     img_width = map_image.shape[1]
