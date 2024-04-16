@@ -33,4 +33,21 @@
 ========================================================================
 ## Theory
 ========================================================================
-1. what is a non euclidean space?
+1. Graph SLAM with known correspondences
+    ```
+    graph_slam_with_Known_Correspondences(u1:t, z1:t):
+    initialize(u1:t):
+        for t in range(T):
+            xt = odom * xt-1
+        x_0:t 
+    while error > epsilon:
+        linearize(states, u, z):
+            info_matrix, info_vec
+        reduce_map_features(info_matrix, info_vec)
+        states = solve(info_matrix, info_vec)
+    return states
+    ```
+    - Graph-Based Landmark SLAM: https://www.youtube.com/watch?v=mZBdPgBtrCM
+    - Graph Based SLAM: https://www.youtube.com/watch?v=uHbRKvD8TWg&t=461s
+    - Full course: http://ais.informatik.uni-freiburg.de/teaching/ws11/robotics2/
+        - should we create a LS solver first? 
