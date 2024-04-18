@@ -8,6 +8,7 @@ TODOs:
 """
 
 import yaml
+
 # import matplotlib.image as mpimg
 import pickle
 import numpy as np
@@ -22,7 +23,7 @@ from localizer_2d_utils import (
     add_pose_to_relative_poses,
     get_points_on_search_grid,
     get_gradient_mat,
-    get_binary_image
+    get_binary_image,
 )
 import cv2
 import os
@@ -37,11 +38,13 @@ BEAM_NOICE_VARIANCE = 0.1  # in meter
 NUM_ANGULAR_SEG = 128
 TEMPLATE_MATCHING_THRESHOLD = 0.25
 
+
 def get_file_path_in_the_same_folder(filename):
     # To get the full, absolute file path
     absolute_file_path = os.path.abspath(__file__)
     dir_name = os.path.dirname(absolute_file_path)
     return os.path.join(dir_name, filename)
+
 
 def load_map_and_meta_data(img_path, metadata_path):
     # Replace 'map.yaml' with the path to your uploaded YAML file
@@ -62,8 +65,10 @@ def load_scan_messages(filename):
         data = pickle.load(file)
     return data
 
+
 def visualize_matrix(mat):
     import matplotlib.pyplot as plt
+
     plt.figure(figsize=(10, 10))
     plt.imshow(
         mat,
@@ -75,10 +80,16 @@ def visualize_matrix(mat):
     plt.ylabel("Matrix Y")
     plt.show()
 
+
 def visualize_map(
-    map_image, origin_px, best_laser_endbeam_xy=None, p_free_endbeams=None, robot_pose=None
+    map_image,
+    origin_px,
+    best_laser_endbeam_xy=None,
+    p_free_endbeams=None,
+    robot_pose=None,
 ):
     import matplotlib.pyplot as plt
+
     origin_x_px, origin_y_px = origin_px
     plt.figure(figsize=(10, 10))
     img_width = map_image.shape[1]
@@ -194,6 +205,18 @@ def get_p_frees_for_all_thetas(
 
     return p_free_relative
 
+
+def downsample(image, factor):
+    new_width = image.shape[1] // factor
+    new_height = image.shape[0] // factor
+
+    # Resize the image
+    downsampled_image = cv2.resize(
+        image, (new_width, new_height), interpolation=cv2.INTER_NEAREST
+    )
+    return downsampled_image
+
+
 def rgba_to_grayscale(map_image):
     try:
         if map_image.shape[2] == 4:
@@ -205,11 +228,12 @@ def rgba_to_grayscale(map_image):
     except Exception:
         return map_image
 
+
 def generate_smallest_matrix(point_list, orig_in_matrix_coord: np.ndarray):
     matrices = []
     relative_robot_poses_in_mat = []
     for points in point_list:
-        x_coords = np.asarray([points[0] for points in points],dtype=int)
+        x_coords = np.asarray([points[0] for points in points], dtype=int)
         y_coords = np.asarray([points[1] for points in points], dtype=int)
         min_x = min(x_coords)
         min_y = min(y_coords)
@@ -217,8 +241,8 @@ def generate_smallest_matrix(point_list, orig_in_matrix_coord: np.ndarray):
         max_y = max(y_coords)
         new_mat = np.ones((max_x - min_x + 1, max_y - min_y + 1))
         x_coords -= min_x
-        y_coords -= min_y 
-        for x,y in zip(x_coords,y_coords):
+        y_coords -= min_y
+        for x, y in zip(x_coords, y_coords):
             new_mat[x][y] = 0
         matrices.append(new_mat)
         relative_robot_poses_in_mat.append(
@@ -226,8 +250,18 @@ def generate_smallest_matrix(point_list, orig_in_matrix_coord: np.ndarray):
         )
     return matrices, relative_robot_poses_in_mat
 
-def score(p_hits_matrix):
-    p_hits = p_hits_matrix
+
+def vanilla_score(p_hits_single):
+    try:
+        xor_mask = create_mask(p_hits_single, img_width, img_height)
+    except IndexError:
+        return -1
+    # gradient_laser_scan = get_gradient_mat(xor_mask)
+    result_map = (xor_mask == map_image).astype(int)
+    return np.sum(result_map)
+
+
+def score(p_hits):
     try:
         xor_mask = create_mask(p_hits, img_width, img_height)
     except IndexError:
@@ -236,43 +270,57 @@ def score(p_hits_matrix):
     result_map = (gradient_laser_scan == img_gradient).astype(int)
     return np.sum(result_map)
 
+
 def find_score(args) -> Tuple[Deque, Deque, Deque]:
     """Find score for a single theta.
 
     Args:
         args (_type_): _description_
     """
-    binary_map_image, theta_id, p_hits_for_all_thetas_image_single_theta, relative_robot_poses_in_mat_theta, origin_px, img_height, = args
+    (
+        binary_map_image,
+        theta_id,
+        p_hits_for_all_thetas_image_single_theta,
+        relative_robot_poses_in_mat_theta,
+        origin_px,
+        img_height,
+    ) = args
     template = p_hits_for_all_thetas_image_single_theta.astype(np.uint8)
+    # binary_map_image = downsample(binary_map_image, 4)
+    # template = downsample(template, 4)
     res = cv2.matchTemplate(binary_map_image, template, cv2.TM_CCOEFF_NORMED)
     candidate_mat_coords = np.where(res > TEMPLATE_MATCHING_THRESHOLD)
     # p_hits_relative_matrix = []
-    # theta = search_thetas[theta_id] 
+    # theta = search_thetas[theta_id]
     # Got a list of candidates. try to score them.
     scores = deque()
     points = deque()
-    p_hits = []
+    p_hits = deque()
     # TODO
-    for x,y in zip(candidate_mat_coords[0], candidate_mat_coords[1]):
-        max_loc = np.array([x,y])
+    for x, y in zip(candidate_mat_coords[0], candidate_mat_coords[1]):
+        max_loc = np.array([x, y])
         max_loc += relative_robot_poses_in_mat_theta
         # point_candidates.append(max_loc)
         # p_hits_relative_matrix.append(p_hits_for_all_thetas_images[theta_id])
         # To matrix coords
-        max_loc_map_pose = matrix_to_map_pixel(np.array([max_loc]), origin_px, img_height)
-    #     # visualize_map(p_hits_for_all_thetas_image, origin_px)
+        max_loc_map_pose = matrix_to_map_pixel(
+            np.array([max_loc]), origin_px, img_height
+        )
+        #     # visualize_map(p_hits_for_all_thetas_image, origin_px)
         p_hits_for_theta_absolute = add_pose_to_relative_poses(
             [p_hits_for_all_thetas[theta_id]], max_loc_map_pose
         )
         p_hits_relative_mat_single = map_pixel_to_matrix(
             p_hits_for_theta_absolute, origin_px, img_height
         )[0]
-        scores.append(score(p_hits_relative_mat_single))
+        scores.append(
+            # score(p_hits_relative_mat_single)
+            vanilla_score(p_hits_relative_mat_single)
+        )
         points.append(max_loc)
         p_hits.append(p_hits_for_theta_absolute)
-    return scores, points, p_hits 
-            
-            
+    return scores, points, p_hits
+
 
 def optimize_using_template_matching(
     map_image: np.ndarray,
@@ -282,25 +330,38 @@ def optimize_using_template_matching(
         p_hits_for_all_thetas, origin_px, img_height
     )
     origin_in_matrix_coords = map_pixel_to_matrix(
-        [np.array([[0,0], ])], origin_px, img_height
+        [
+            np.array(
+                [
+                    [0, 0],
+                ]
+            )
+        ],
+        origin_px,
+        img_height,
     )
-    p_hits_for_all_thetas_images, relative_robot_poses_in_mat = generate_smallest_matrix(p_hits_for_all_thetas_for_pose_matrix, origin_in_matrix_coords)
+    (
+        p_hits_for_all_thetas_images,
+        relative_robot_poses_in_mat,
+    ) = generate_smallest_matrix(
+        p_hits_for_all_thetas_for_pose_matrix, origin_in_matrix_coords
+    )
     binary_map_image = get_binary_image(map_image)
 
     pool = Pool()
     THETA_NUM = len(search_thetas)
-    task_args=zip(
-        [binary_map_image] * THETA_NUM, 
+    task_args = zip(
+        [binary_map_image] * THETA_NUM,
         list(range(THETA_NUM)),
         p_hits_for_all_thetas_images,
         relative_robot_poses_in_mat,
         [origin_px] * THETA_NUM,
         [img_height] * THETA_NUM,
     )
-    results = pool.map(find_score, task_args)     
+    results = pool.map(find_score, task_args)
     pool.close()
     pool.join()
-    
+
     # Find the result with the best score
     best_score = -np.inf
     best_point_so_far = None
@@ -308,23 +369,37 @@ def optimize_using_template_matching(
 
     for scores, points, p_hits_ls in results:
         for s, point, p_hits in zip(scores, points, p_hits_ls):
+            # TODO Remember to remove
+            print(f"Rico: s: {s}, point: {point}")
             if s > best_score:
                 best_score = s
                 best_point_so_far = point
                 # TODO this is ugly
                 best_p_hits = p_hits[0]
 
-    print(f'Rico: best_point_so_far: {best_point_so_far}, score: {best_score}')
-    print(f'Rico: total_time: {time.time() - start_time}')
-    #TODO Remember to remove
-    print(f'Rico: {best_point_so_far}')
+    print(f"Rico: best_point_so_far: {best_point_so_far}, score: {best_score}")
+    print(f"Rico: total_time: {time.time() - start_time}")
+
     if best_point_so_far is not None:
-        best_point_so_far = matrix_to_map_pixel(np.array([best_point_so_far, ]), origin_px, img_height)
-        # visualize_map(map_image, origin_px, best_p_hits, robot_pose=best_point_so_far[0])
+        best_point_so_far = matrix_to_map_pixel(
+            np.array(
+                [
+                    best_point_so_far,
+                ]
+            ),
+            origin_px,
+            img_height,
+        )
+        visualize_map(
+            map_image, origin_px, best_p_hits, robot_pose=best_point_so_far[0]
+        )
+
 
 if __name__ == "__main__":
-    map_metadata, map_image = load_map_and_meta_data(get_file_path_in_the_same_folder("map499.png"),
-                                                     get_file_path_in_the_same_folder("map499.yaml"))
+    map_metadata, map_image = load_map_and_meta_data(
+        get_file_path_in_the_same_folder("map499.png"),
+        get_file_path_in_the_same_folder("map499.yaml"),
+    )
     # map_metadata, map_image = load_map_and_meta_data(get_file_path_in_the_same_folder("bird_world.pgm"),
     #                                                  get_file_path_in_the_same_folder("bird_world.yaml"))
     map_image = rgba_to_grayscale(map_image)
@@ -373,4 +448,3 @@ if __name__ == "__main__":
     optimize_using_template_matching(
         map_image=map_image,
     )
-
