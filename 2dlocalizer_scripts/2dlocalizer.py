@@ -318,12 +318,15 @@ def optimize_using_template_matching(
     print(f'Rico: total_time: {time.time() - start_time}')
     #TODO Remember to remove
     print(f'Rico: {best_point_so_far}')
-    best_point_so_far = matrix_to_map_pixel(np.array([best_point_so_far, ]), origin_px, img_height)
-    visualize_map(map_image, origin_px, best_p_hits, robot_pose=best_point_so_far[0])
+    if best_point_so_far is not None:
+        best_point_so_far = matrix_to_map_pixel(np.array([best_point_so_far, ]), origin_px, img_height)
+        # visualize_map(map_image, origin_px, best_p_hits, robot_pose=best_point_so_far[0])
 
 if __name__ == "__main__":
-    map_metadata, map_image = load_map_and_meta_data(get_file_path_in_the_same_folder("bird_world.pgm"),
-                                                     get_file_path_in_the_same_folder("bird_world.yaml"))
+    map_metadata, map_image = load_map_and_meta_data(get_file_path_in_the_same_folder("map499.png"),
+                                                     get_file_path_in_the_same_folder("map499.yaml"))
+    # map_metadata, map_image = load_map_and_meta_data(get_file_path_in_the_same_folder("bird_world.pgm"),
+    #                                                  get_file_path_in_the_same_folder("bird_world.yaml"))
     map_image = rgba_to_grayscale(map_image)
     all_data = load_scan_messages(get_file_path_in_the_same_folder("scan_data.pkl"))
     img_gradient = get_gradient_mat(map_image)
@@ -348,7 +351,7 @@ if __name__ == "__main__":
     resolution_squared = resolution * resolution
     # TODO Remember to remove
     print(f"length of data: {len(all_data)}")
-    trial_scan_msg = all_data[0]
+    trial_scan_msg = all_data[-1]
 
     # TODO
     search_thetas = np.arange(0, 2 * np.pi, np.pi / NUM_ANGULAR_SEG)
