@@ -12,7 +12,7 @@ int main() {
     }
 
     // Load the template image
-    cv::Mat templ = cv::imread("map499.png", cv::IMREAD_COLOR);
+    cv::Mat templ = cv::imread("map499_bluth.png", cv::IMREAD_COLOR);
     if (templ.empty()) {
         std::cerr << "Error reading the template" << std::endl;
         return -1;
@@ -38,10 +38,11 @@ int main() {
 
     // Draw a rectangle on the found location
     cv::rectangle(img, matchLoc, cv::Point(matchLoc.x + templ.cols, matchLoc.y + templ.rows), cv::Scalar::all(0), 2, 8, 0);
+    std::cout<<"matchLoc: "<<matchLoc.x<<", "<<matchLoc.y<<std::endl;
 
     // Show the result
     cv::imshow("Matched Result", img);
-    cv::waitKey(0);
+    cv::waitKey(5000);
 
     return 0;
 }
