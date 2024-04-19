@@ -314,8 +314,8 @@ def find_score(args) -> Tuple[Deque, Deque, Deque]:
             p_hits_for_theta_absolute, origin_px, img_height
         )[0]
         scores.append(
-            # score(p_hits_relative_mat_single)
-            vanilla_score(p_hits_relative_mat_single)
+            score(p_hits_relative_mat_single)
+            # vanilla_score(p_hits_relative_mat_single)
         )
         points.append(max_loc)
         p_hits.append(p_hits_for_theta_absolute)
@@ -370,7 +370,7 @@ def optimize_using_template_matching(
     for scores, points, p_hits_ls in results:
         for s, point, p_hits in zip(scores, points, p_hits_ls):
             # TODO Remember to remove
-            print(f"Rico: s: {s}, point: {point}")
+            # print(f"Rico: s: {s}, point: {point}")
             if s > best_score:
                 best_score = s
                 best_point_so_far = point
