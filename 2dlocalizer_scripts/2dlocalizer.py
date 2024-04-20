@@ -34,8 +34,8 @@ SEARCH_GRID_RESOLUTION = 4  # 0.2m
 BEAM_SEARCH_KERNEL_SIZE = 2
 BEAM_NOICE_VARIANCE = 0.1  # in meter
 # TODO
-# NUM_ANGULAR_SEG = 128
 NUM_ANGULAR_SEG = 128
+# NUM_ANGULAR_SEG = 4
 TEMPLATE_MATCHING_THRESHOLD = 0.25
 
 
@@ -288,38 +288,69 @@ def find_score(args) -> Tuple[Deque, Deque, Deque]:
     template = p_hits_for_all_thetas_image_single_theta.astype(np.uint8)
     # binary_map_image = downsample(binary_map_image, 4)
     # template = downsample(template, 4)
-    res = cv2.matchTemplate(binary_map_image, template, cv2.TM_CCOEFF_NORMED)
+    res = cv2.matchTemplate(binary_map_image, template, cv2.TM_CCOEFF)
+    # res = cv2.matchTemplate(binary_map_image, template, cv2.TM_CCOEFF_NORMED)
+    # Important: cv2.minMaxLoc returns [y,x] while np.where returns [x,y]
     candidate_mat_coords = np.where(res > TEMPLATE_MATCHING_THRESHOLD)
-    # p_hits_relative_matrix = []
-    # theta = search_thetas[theta_id]
     # Got a list of candidates. try to score them.
     scores = deque()
     points = deque()
     p_hits = deque()
-    # TODO
-    for x, y in zip(candidate_mat_coords[0], candidate_mat_coords[1]):
-        max_loc = np.array([x, y])
+
+    _, score, min_loc, max_loc = cv2.minMaxLoc(res, None)
+    if score > TEMPLATE_MATCHING_THRESHOLD:
+        max_loc = max_loc[::-1]
+        #TODO Remember to remove
+        print(f'Rico: max_loc raw: {max_loc}')
         max_loc += relative_robot_poses_in_mat_theta
-        # point_candidates.append(max_loc)
-        # p_hits_relative_matrix.append(p_hits_for_all_thetas_images[theta_id])
-        # To matrix coords
         max_loc_map_pose = matrix_to_map_pixel(
             np.array([max_loc]), origin_px, img_height
         )
-        #     # visualize_map(p_hits_for_all_thetas_image, origin_px)
         p_hits_for_theta_absolute = add_pose_to_relative_poses(
             [p_hits_for_all_thetas[theta_id]], max_loc_map_pose
         )
-        p_hits_relative_mat_single = map_pixel_to_matrix(
-            p_hits_for_theta_absolute, origin_px, img_height
-        )[0]
         scores.append(
-            score(p_hits_relative_mat_single)
-            # vanilla_score(p_hits_relative_mat_single)
+            score
         )
         points.append(max_loc)
         p_hits.append(p_hits_for_theta_absolute)
+        print("max_loc_map_pose", max_loc_map_pose, "score: ", score)
+        # visualize_matrix(template)
+        # visualize_matrix(res)
+        # visualize_map(img_gradient, origin_px, p_hits_for_theta_absolute[0], robot_pose=max_loc_map_pose[0])
+    
+    # # TODO - check if the scores are representative.
+    # for x, y in zip(candidate_mat_coords[0], candidate_mat_coords[1]):
+    #     max_loc = np.array([x, y])
+    #     max_loc += relative_robot_poses_in_mat_theta
+    #     # point_candidates.append(max_loc)
+    #     # p_hits_relative_matrix.append(p_hits_for_all_thetas_images[theta_id])
+    #     # To matrix coords
+    #     max_loc_map_pose = matrix_to_map_pixel(
+    #         np.array([max_loc]), origin_px, img_height
+    #     )
+    #     #     # visualize_map(p_hits_for_all_thetas_image, origin_px)
+    #     p_hits_for_theta_absolute = add_pose_to_relative_poses(
+    #         [p_hits_for_all_thetas[theta_id]], max_loc_map_pose
+    #     )
+    #     p_hits_relative_mat_single = map_pixel_to_matrix(
+    #         p_hits_for_theta_absolute, origin_px, img_height
+    #     )[0]
+    #     scores.append(
+    #         # score(p_hits_relative_mat_single)
+    #         vanilla_score(p_hits_relative_mat_single)
+    #     )
+    #     points.append(max_loc)
+    #     p_hits.append(p_hits_for_theta_absolute)
     return scores, points, p_hits
+
+def get_img_gradient(p_hits_for_all_thetas_images):
+    p_hits_for_all_thetas_image_gradients = deque()
+    for p_hits_for_all_thetas_image in p_hits_for_all_thetas_images:
+        p_hits_for_all_thetas_image_gradients.append(
+            get_gradient_mat(p_hits_for_all_thetas_image)
+        )
+    return p_hits_for_all_thetas_image_gradients
 
 
 def optimize_using_template_matching(
@@ -347,17 +378,22 @@ def optimize_using_template_matching(
         p_hits_for_all_thetas_for_pose_matrix, origin_in_matrix_coords
     )
     binary_map_image = get_binary_image(map_image)
+    p_hits_for_all_thetas_image_gradients = get_img_gradient(p_hits_for_all_thetas_images)
 
     pool = Pool()
     THETA_NUM = len(search_thetas)
     task_args = zip(
-        [binary_map_image] * THETA_NUM,
+        [img_gradient] * THETA_NUM,
         list(range(THETA_NUM)),
-        p_hits_for_all_thetas_images,
+        p_hits_for_all_thetas_image_gradients,
+        # p_hits_for_all_thetas_images,
         relative_robot_poses_in_mat,
         [origin_px] * THETA_NUM,
         [img_height] * THETA_NUM,
     )
+    # TODO
+    # for t in task_args:
+    #     find_score(t)
     results = pool.map(find_score, task_args)
     pool.close()
     pool.join()
@@ -396,12 +432,12 @@ def optimize_using_template_matching(
 
 
 if __name__ == "__main__":
-    map_metadata, map_image = load_map_and_meta_data(
-        get_file_path_in_the_same_folder("map499.png"),
-        get_file_path_in_the_same_folder("map499.yaml"),
-    )
-    # map_metadata, map_image = load_map_and_meta_data(get_file_path_in_the_same_folder("bird_world.pgm"),
-    #                                                  get_file_path_in_the_same_folder("bird_world.yaml"))
+    # map_metadata, map_image = load_map_and_meta_data(
+    #     get_file_path_in_the_same_folder("map499.png"),
+    #     get_file_path_in_the_same_folder("map499.yaml"),
+    # )
+    map_metadata, map_image = load_map_and_meta_data(get_file_path_in_the_same_folder("bird_world.pgm"),
+                                                     get_file_path_in_the_same_folder("bird_world.yaml"))
     map_image = rgba_to_grayscale(map_image)
     all_data = load_scan_messages(get_file_path_in_the_same_folder("scan_data.pkl"))
     img_gradient = get_gradient_mat(map_image)
@@ -440,9 +476,6 @@ if __name__ == "__main__":
         scan_msg=trial_scan_msg,
         effective_range=effective_range,
         resolution=resolution,
-    )
-    p_frees_for_all_thetas = get_p_frees_for_all_thetas(
-        search_thetas, p_hits_for_all_thetas
     )
 
     optimize_using_template_matching(
