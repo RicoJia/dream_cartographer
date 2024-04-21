@@ -1,3 +1,4 @@
+// docker run --rm -it -v /home/$USER/rjia:/home/rjia --workdir /home/rjia --runtime nvidia --network host nvcr.io/nvidia/l4t-ml:r32.6.1-py3
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/cudaimgproc.hpp>

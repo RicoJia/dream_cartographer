@@ -14,6 +14,8 @@
 #include <Eigen/Dense>
 #include <cmath>
 #include <limits>
+#include <opencv2/core/cuda.hpp>
+#include <opencv2/cudaimgproc.hpp>
 
 #include "ThreadPool.h"
 

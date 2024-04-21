@@ -1,5 +1,9 @@
-// g++ -std=c++17 2dlocalizer.cpp -O2 -pthread -lyaml-cpp -I /usr/include/eigen3 `pkg-config --cflags --libs opencv4` && 
+// g++ -std=c++17 2dlocalizer.cpp -O2 -pthread -lyaml-cpp -I /usr/include/eigen3 `pkg-config --cflags --libs opencv4`
 // ./a.out bird_world.pgm 256 200 cpu
+
+// On GPU: ln -s /usr/include/opencv4/opencv2 /usr/include/opencv2
+// apt update && apt install libyaml-cpp-dev && apt-get install libeigen3-dev
+//  g++ -std=c++17 2dlocalizer.cpp -O2 -pthread -lyaml-cpp -I /usr/include/eigen3 `pkg-config --cflags --libs opencv4`
 #include "2dlocalizer.hpp"
 #include "ThreadPool.h"
 #include <asm-generic/errno.h>
