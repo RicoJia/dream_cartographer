@@ -33,6 +33,7 @@ struct InputArgs {
   std::string map_metadata_filename;
   int num_angular_seg;
   int trial_laser_scan_id;
+  bool use_gpu;
   friend std::ostream &operator<<(std::ostream &os, const InputArgs &args) {
     os << " map_image_filename: " << args.map_image_filename << ", ";
     os << " map_metadata_filename: " << args.map_metadata_filename;
@@ -44,9 +45,9 @@ struct InputArgs {
 };
 
 InputArgs parse_input_args(int argc, char **argv) {
-  if (argc != 4)
+  if (argc != 5)
     throw std::runtime_error("usage: 2dlocalizer <map_image_filename> "
-                             "<num_angular_seg> <trial_laser_scan_id>");
+                             "<num_angular_seg> <trial_laser_scan_id> <cpu_or_gpu>");
   InputArgs args;
   args.map_image_filename = argv[1];
   std::regex rgx(
@@ -61,6 +62,7 @@ InputArgs parse_input_args(int argc, char **argv) {
   }
   args.num_angular_seg = std::atoi(argv[2]);
   args.trial_laser_scan_id = std::atoi(argv[3]);
+  args.use_gpu = std::strcmp(argv[4], "gpu") == 0;
   return args;
 }
 
@@ -343,11 +345,22 @@ inline void generate_smallest_matrices_for_all_thetas(
 inline std::tuple<double, Eigen::Vector2i, unsigned int>
 find_score(const cv::Mat &binary_map_image, const unsigned int &theta_id,
            const cv::Mat &templ,
-           const Eigen::Vector2i &relative_robot_pose_in_mat) {
+           const Eigen::Vector2i &relative_robot_pose_in_mat,
+           const bool& use_gpu) {
   int result_col_num = binary_map_image.cols - templ.cols + 1;
   int result_row_num = binary_map_image.rows - templ.rows + 1;
-  cv::Mat res(result_row_num, result_col_num, CV_32FC1);
-  cv::matchTemplate(binary_map_image, templ, res, cv::TM_CCOEFF);
+    cv::Mat res;
+    if (use_gpu) {
+        cv::cuda::GpuMat d_img(binary_map_image);
+        cv::cuda::GpuMat d_templ(templ);
+        cv::cuda::GpuMat d_result;
+        cv::Ptr<cv::cuda::TemplateMatching> matcher = cv::cuda::createTemplateMatching(binary_map_image.type(), cv::TM_CCOEFF);
+        matcher->match(d_img, d_templ, d_result);
+        d_result.download(result);
+    }else{
+        res = cv::Mat(result_row_num, result_col_num, CV_32FC1);
+        cv::matchTemplate(binary_map_image, templ, res, cv::TM_CCOEFF);
+    }
 
   // cv::normalize(res, res, 0, 1, cv::NORM_MINMAX, -1);
   double min_val, max_val;

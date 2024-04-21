@@ -1,5 +1,5 @@
-// g++ -std=c++17 2dlocalizer.cpp -O2 -pthread -lyaml-cpp -I /usr/include/eigen3
-// `pkg-config --cflags --libs opencv4` && ./a.out map499.png 4 0
+// g++ -std=c++17 2dlocalizer.cpp -O2 -pthread -lyaml-cpp -I /usr/include/eigen3 `pkg-config --cflags --libs opencv4` && 
+// ./a.out bird_world.pgm 256 200 cpu
 #include "2dlocalizer.hpp"
 #include "ThreadPool.h"
 #include <asm-generic/errno.h>
@@ -60,9 +60,9 @@ int main(int argc, char *argv[]) {
   for (unsigned int i = 0; i < search_thetas.size(); i++) {
     auto fut = pool.enqueue([i, &map_img,
                              &p_hits_for_all_thetas_image_gradients,
-                             &relative_robot_poses_in_mat] {
+                             &relative_robot_poses_in_mat, &input_args] {
       return find_score(map_img, i, p_hits_for_all_thetas_image_gradients.at(i),
-                        relative_robot_poses_in_mat.at(i));
+                        relative_robot_poses_in_mat.at(i), input_args.use_gpu);
     });
     futures.push_back(std::move(fut));
   }
