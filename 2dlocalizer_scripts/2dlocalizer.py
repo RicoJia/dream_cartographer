@@ -432,12 +432,12 @@ def optimize_using_template_matching(
 
 
 if __name__ == "__main__":
-    # map_metadata, map_image = load_map_and_meta_data(
-    #     get_file_path_in_the_same_folder("map499.png"),
-    #     get_file_path_in_the_same_folder("map499.yaml"),
-    # )
-    map_metadata, map_image = load_map_and_meta_data(get_file_path_in_the_same_folder("bird_world.pgm"),
-                                                     get_file_path_in_the_same_folder("bird_world.yaml"))
+    map_metadata, map_image = load_map_and_meta_data(
+        get_file_path_in_the_same_folder("map499.png"),
+        get_file_path_in_the_same_folder("map499.yaml"),
+    )
+    # map_metadata, map_image = load_map_and_meta_data(get_file_path_in_the_same_folder("bird_world.pgm"),
+    #                                                  get_file_path_in_the_same_folder("bird_world.yaml"))
     map_image = rgba_to_grayscale(map_image)
     all_data = load_scan_messages(get_file_path_in_the_same_folder("scan_data.pkl"))
     img_gradient = get_gradient_mat(map_image)
@@ -449,14 +449,13 @@ if __name__ == "__main__":
     origin_px = (
         np.array([-map_metadata["origin"][0], -map_metadata["origin"][1]]) / resolution
     ).astype(int)
+    #TODO Remember to remove
+    print(f'Rico: origin_px: {origin_px}')
 
     # # Convert world coordinates to pixel coordinates
     # # Especially y, because in robotics, Y starts from bottoms up
     # # while in computer graphics, Y starts from top down
     # visualize_map(map_image, origin_px)
-    beam_search_kernel = list(
-        range(-BEAM_SEARCH_KERNEL_SIZE, BEAM_SEARCH_KERNEL_SIZE, 1)
-    )
     # meter -> pixels
     effective_range = 10 / resolution
     resolution_squared = resolution * resolution
