@@ -300,8 +300,8 @@ def find_score(args) -> Tuple[Deque, Deque, Deque]:
     _, score, min_loc, max_loc = cv2.minMaxLoc(res, None)
     if score > TEMPLATE_MATCHING_THRESHOLD:
         max_loc = max_loc[::-1]
-        #TODO Remember to remove
-        print(f'Rico: max_loc raw: {max_loc}')
+        # TODO Remember to remove
+        # print(f"Rico: max_loc raw: {max_loc}")
         max_loc += relative_robot_poses_in_mat_theta
         max_loc_map_pose = matrix_to_map_pixel(
             np.array([max_loc]), origin_px, img_height
@@ -309,40 +309,11 @@ def find_score(args) -> Tuple[Deque, Deque, Deque]:
         p_hits_for_theta_absolute = add_pose_to_relative_poses(
             [p_hits_for_all_thetas[theta_id]], max_loc_map_pose
         )
-        scores.append(
-            score
-        )
+        scores.append(score)
         points.append(max_loc)
         p_hits.append(p_hits_for_theta_absolute)
-        print("max_loc_map_pose", max_loc_map_pose, "score: ", score)
-        # visualize_matrix(template)
-        # visualize_matrix(res)
-        # visualize_map(img_gradient, origin_px, p_hits_for_theta_absolute[0], robot_pose=max_loc_map_pose[0])
-    
-    # # TODO - check if the scores are representative.
-    # for x, y in zip(candidate_mat_coords[0], candidate_mat_coords[1]):
-    #     max_loc = np.array([x, y])
-    #     max_loc += relative_robot_poses_in_mat_theta
-    #     # point_candidates.append(max_loc)
-    #     # p_hits_relative_matrix.append(p_hits_for_all_thetas_images[theta_id])
-    #     # To matrix coords
-    #     max_loc_map_pose = matrix_to_map_pixel(
-    #         np.array([max_loc]), origin_px, img_height
-    #     )
-    #     #     # visualize_map(p_hits_for_all_thetas_image, origin_px)
-    #     p_hits_for_theta_absolute = add_pose_to_relative_poses(
-    #         [p_hits_for_all_thetas[theta_id]], max_loc_map_pose
-    #     )
-    #     p_hits_relative_mat_single = map_pixel_to_matrix(
-    #         p_hits_for_theta_absolute, origin_px, img_height
-    #     )[0]
-    #     scores.append(
-    #         # score(p_hits_relative_mat_single)
-    #         vanilla_score(p_hits_relative_mat_single)
-    #     )
-    #     points.append(max_loc)
-    #     p_hits.append(p_hits_for_theta_absolute)
     return scores, points, p_hits
+
 
 def get_img_gradient(p_hits_for_all_thetas_images):
     p_hits_for_all_thetas_image_gradients = deque()
@@ -377,8 +348,9 @@ def optimize_using_template_matching(
     ) = generate_smallest_matrix(
         p_hits_for_all_thetas_for_pose_matrix, origin_in_matrix_coords
     )
-    binary_map_image = get_binary_image(map_image)
-    p_hits_for_all_thetas_image_gradients = get_img_gradient(p_hits_for_all_thetas_images)
+    p_hits_for_all_thetas_image_gradients = get_img_gradient(
+        p_hits_for_all_thetas_images
+    )
 
     pool = Pool()
     THETA_NUM = len(search_thetas)
@@ -449,8 +421,8 @@ if __name__ == "__main__":
     origin_px = (
         np.array([-map_metadata["origin"][0], -map_metadata["origin"][1]]) / resolution
     ).astype(int)
-    #TODO Remember to remove
-    print(f'Rico: origin_px: {origin_px}')
+    # TODO Remember to remove
+    print(f"Rico: origin_px: {origin_px}")
 
     # # Convert world coordinates to pixel coordinates
     # # Especially y, because in robotics, Y starts from bottoms up
@@ -458,10 +430,8 @@ if __name__ == "__main__":
     # visualize_map(map_image, origin_px)
     # meter -> pixels
     effective_range = 10 / resolution
-    resolution_squared = resolution * resolution
-    # TODO Remember to remove
-    print(f"length of data: {len(all_data)}")
-    trial_scan_msg = all_data[-1]
+    trial_scan_msg = all_data[400]
+    print(f"length of data: {len(all_data)}, trial_scan_msg: {len(trial_scan_msg)}")
 
     # TODO
     search_thetas = np.arange(0, 2 * np.pi, np.pi / NUM_ANGULAR_SEG)
