@@ -32,8 +32,8 @@ target_link_libraries(2DLocalizer
 )
 
 find_package(CUDA)
-# Check if CUDA was found
-if(CMAKE_CUDA_COMPILER)
+# Check if CUDA was found, flag from CMAKE
+if(CUDA_FOUND)
     # Attempt to find CUDA
     message(STATUS "CUDA Found: ${CUDA_VERSION_STRING}")
     enable_language(CUDA)
