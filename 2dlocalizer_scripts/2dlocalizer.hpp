@@ -14,8 +14,11 @@
 #include <Eigen/Dense>
 #include <cmath>
 #include <limits>
+// this flag is set in CMakeLists.txt
+#ifdef USE_CUDA
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/cudaimgproc.hpp>
+#endif
 
 #include "ThreadPool.h"
 
@@ -353,12 +356,16 @@ find_score(const cv::Mat &binary_map_image, const unsigned int &theta_id,
   int result_row_num = binary_map_image.rows - templ.rows + 1;
     cv::Mat res;
     if (use_gpu) {
+        #ifdef USE_CUDA
         cv::cuda::GpuMat d_img(binary_map_image);
         cv::cuda::GpuMat d_templ(templ);
         cv::cuda::GpuMat d_result;
         cv::Ptr<cv::cuda::TemplateMatching> matcher = cv::cuda::createTemplateMatching(binary_map_image.type(), cv::TM_CCOEFF);
         matcher->match(d_img, d_templ, d_result);
         d_result.download(res);
+        #else
+        std::cout<<"gpu not supported!!"<<std::endl;
+        #endif
     }else{
         res = cv::Mat(result_row_num, result_col_num, CV_32FC1);
         cv::matchTemplate(binary_map_image, templ, res, cv::TM_CCOEFF);
