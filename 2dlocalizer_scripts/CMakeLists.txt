@@ -31,12 +31,10 @@ target_link_libraries(2DLocalizer
     Threads::Threads
 )
 
-
+find_package(CUDA)
 # Check if CUDA was found
 if(CMAKE_CUDA_COMPILER)
     # Attempt to find CUDA
-    add_definitions(-DUSE_CUDA)
-    find_package(CUDA)
     message(STATUS "CUDA Found: ${CUDA_VERSION_STRING}")
     enable_language(CUDA)
     include_directories(${CUDA_INCLUDE_DIRS})

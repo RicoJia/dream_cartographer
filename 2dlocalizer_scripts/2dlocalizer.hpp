@@ -357,14 +357,14 @@ find_score(const cv::Mat &binary_map_image, const unsigned int &theta_id,
     cv::Mat res;
     if (use_gpu) {
         #ifdef USE_CUDA
-        cv::cuda::GpuMat d_img(binary_map_image);
-        cv::cuda::GpuMat d_templ(templ);
-        cv::cuda::GpuMat d_result;
-        cv::Ptr<cv::cuda::TemplateMatching> matcher = cv::cuda::createTemplateMatching(binary_map_image.type(), cv::TM_CCOEFF);
-        matcher->match(d_img, d_templ, d_result);
-        d_result.download(res);
+            cv::cuda::GpuMat d_img(binary_map_image);
+            cv::cuda::GpuMat d_templ(templ);
+            cv::cuda::GpuMat d_result;
+            cv::Ptr<cv::cuda::TemplateMatching> matcher = cv::cuda::createTemplateMatching(binary_map_image.type(), cv::TM_CCOEFF);
+            matcher->match(d_img, d_templ, d_result);
+            d_result.download(res);
         #else
-        std::cout<<"gpu not supported!!"<<std::endl;
+            std::cout<<"gpu not supported!!"<<std::endl;
         #endif
     }else{
         res = cv::Mat(result_row_num, result_col_num, CV_32FC1);
