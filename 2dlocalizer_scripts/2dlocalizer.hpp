@@ -23,7 +23,7 @@
 #include "ThreadPool.h"
 
 // ----------------------------------------------------------------
-// Utils
+// I/O Utils
 // ----------------------------------------------------------------
 Eigen::IOFormat print_in_one_line_format(4, 0, ", ", ", ", "", "", "", "");
 struct RoundToInt {
@@ -39,6 +39,7 @@ struct InputArgs {
   int num_angular_seg;
   int trial_laser_scan_id;
   bool use_gpu;
+  int downsize_factor;
   friend std::ostream &operator<<(std::ostream &os, const InputArgs &args) {
     os << " map_image_filename: " << args.map_image_filename << ", ";
     os << " map_metadata_filename: " << args.map_metadata_filename;
@@ -50,9 +51,10 @@ struct InputArgs {
 };
 
 InputArgs parse_input_args(int argc, char **argv) {
-  if (argc != 5)
+  if (argc != 6)
     throw std::runtime_error("usage: 2dlocalizer <map_image_filename> "
-                             "<num_angular_seg> <trial_laser_scan_id> <cpu_or_gpu>");
+                             "<num_angular_seg> <trial_laser_scan_id> "
+                             "<cpu_or_gpu> <downsize_factor>");
   InputArgs args;
   args.map_image_filename = argv[1];
   std::regex rgx(
@@ -68,6 +70,7 @@ InputArgs parse_input_args(int argc, char **argv) {
   args.num_angular_seg = std::atoi(argv[2]);
   args.trial_laser_scan_id = std::atoi(argv[3]);
   args.use_gpu = std::strcmp(argv[4], "gpu") == 0;
+  args.downsize_factor = std::atoi(argv[5]);
   return args;
 }
 
@@ -227,7 +230,7 @@ map_pixel_to_image_coords(const Eigen::Vector2i &map_point,
 }
 
 // ----------------------------------------------------------------
-// Business Logic
+// CV Utils
 // ----------------------------------------------------------------
 
 inline cv::Mat get_image_gradient(const cv::Mat &binary_image) {
@@ -245,15 +248,6 @@ inline cv::Mat get_binary_image(const cv::Mat &image) {
   return new_image;
 }
 
-inline cv::Mat map_image_preprocessing(const cv::Mat &map_image) {
-  // to gray
-  cv::Mat new_map_image;
-  cv::cvtColor(map_image, new_map_image, cv::COLOR_RGBA2GRAY);
-  new_map_image = get_binary_image(new_map_image);
-  new_map_image = get_image_gradient(new_map_image);
-  return new_map_image;
-}
-
 inline Eigen::VectorXd arange(const double &start, const double &end,
                               const int &num) {
   const double step = (end - start) / num;
@@ -262,6 +256,41 @@ inline Eigen::VectorXd arange(const double &start, const double &end,
     ret(i) = start + i * step;
   return ret;
 };
+
+inline cv::Mat downsize_image(const cv::Mat &image,
+                              const unsigned int downsize_factor) {
+  int width = static_cast<int>(image.cols * 1.0 / downsize_factor);
+  int height = static_cast<int>(image.rows * 1.0 / downsize_factor);
+  cv::Mat resized_image;
+  cv::resize(image, resized_image, cv::Size(width, height), 0, 0,
+             cv::INTER_NEAREST);
+  return resized_image;
+}
+
+inline Eigen::Vector2i downsize_vector2i(const Eigen::Vector2i &vec,
+                                         const unsigned int downsize_factor) {
+  return Eigen::Vector2i(static_cast<int>(vec[0] * 1.0 / downsize_factor),
+                         static_cast<int>(vec[1] * 1.0 / downsize_factor));
+}
+
+inline void downsize_laser_scan_msg(std::vector<double> &scan_msg,
+                                    const unsigned int downsize_factor) {
+  for (int i = 0; i < scan_msg.size(); i++) {
+    scan_msg[i] = scan_msg[i] * 1.0 / downsize_factor;
+  }
+}
+
+// ----------------------------------------------------------------
+// Business Logic
+// ----------------------------------------------------------------
+inline cv::Mat map_image_preprocessing(const cv::Mat &map_image) {
+  // to gray
+  cv::Mat new_map_image;
+  cv::cvtColor(map_image, new_map_image, cv::COLOR_RGBA2GRAY);
+  new_map_image = get_binary_image(new_map_image);
+  new_map_image = get_image_gradient(new_map_image);
+  return new_map_image;
+}
 
 inline std::vector<std::vector<Eigen::Vector2i>>
 get_laser_endbeam_relative_for_all_thetas(
@@ -351,25 +380,27 @@ inline std::tuple<double, Eigen::Vector2i, unsigned int>
 find_score(const cv::Mat &binary_map_image, const unsigned int &theta_id,
            const cv::Mat &templ,
            const Eigen::Vector2i &relative_robot_pose_in_mat,
-           const bool& use_gpu) {
+           const bool &use_gpu) {
   int result_col_num = binary_map_image.cols - templ.cols + 1;
   int result_row_num = binary_map_image.rows - templ.rows + 1;
-    cv::Mat res;
-    if (use_gpu) {
-        #ifdef USE_CUDA
-            cv::cuda::GpuMat d_img(binary_map_image);
-            cv::cuda::GpuMat d_templ(templ);
-            cv::cuda::GpuMat d_result;
-            cv::Ptr<cv::cuda::TemplateMatching> matcher = cv::cuda::createTemplateMatching(binary_map_image.type(), cv::TM_CCOEFF);
-            matcher->match(d_img, d_templ, d_result);
-            d_result.download(res);
-        #else
-            std::cout<<"gpu not supported!!"<<std::endl;
-        #endif
-    }else{
-        res = cv::Mat(result_row_num, result_col_num, CV_32FC1);
-        cv::matchTemplate(binary_map_image, templ, res, cv::TM_CCOEFF);
-    }
+  cv::Mat res;
+  if (use_gpu) {
+#ifdef USE_CUDA
+    cv::cuda::GpuMat d_img(binary_map_image);
+    cv::cuda::GpuMat d_templ(templ);
+    cv::cuda::GpuMat d_result;
+    cv::Ptr<cv::cuda::TemplateMatching> matcher =
+        cv::cuda::createTemplateMatching(binary_map_image.type(),
+                                         cv::TM_CCOEFF);
+    matcher->match(d_img, d_templ, d_result);
+    d_result.download(res);
+#else
+    std::cout << "gpu not supported!!" << std::endl;
+#endif
+  } else {
+    res = cv::Mat(result_row_num, result_col_num, CV_32FC1);
+    cv::matchTemplate(binary_map_image, templ, res, cv::TM_CCOEFF);
+  }
 
   // cv::normalize(res, res, 0, 1, cv::NORM_MINMAX, -1);
   double min_val, max_val;
@@ -385,6 +416,9 @@ find_score(const cv::Mat &binary_map_image, const unsigned int &theta_id,
   return std::make_tuple(max_val, max_loc_vec, theta_id);
 }
 
+// ----------------------------------------------------------------
+// Image Processing Utils
+// ----------------------------------------------------------------
 inline cv::Point get_cv_point(const Eigen::Vector2i &point) {
   return cv::Point(point[0], point[1]);
 }
@@ -401,50 +435,33 @@ inline void add_point_to_image(const cv::Point &point, cv::Mat &img,
 }
 
 inline cv::Mat add_laser_scan_and_origin_to_map(
-    const cv::Mat &map_image, const Eigen::Vector2i &best_loc_map_pixel,
-    const unsigned int &theta_id,
-    const std::vector<Eigen::Vector2i> &p_hits_relative_map_pixel,
-    const Eigen::Vector2i &origin_px, const double &img_height) {
+    const cv::Mat &map_image, const Eigen::Vector2i &origin_px,
+    const double &img_height, const Eigen::Vector2i &best_loc_map_pixel = {},
+    const std::vector<Eigen::Vector2i> &p_hits_relative_map_pixel = {}) {
   cv::Mat new_map_image = map_image.clone();
   auto origin_px_map = shifted_map_to_image_pixel(origin_px, img_height);
   auto origin_point = get_cv_point(origin_px_map);
   add_point_to_image(origin_point, new_map_image, "origin");
 
-  auto best_loc_image_pose =
-      map_pixel_to_image_coords(best_loc_map_pixel, origin_px, img_height);
-  auto best_loc_point = get_cv_point(best_loc_image_pose);
-  // TODO
-  std::cout << "best_loc_point: " << best_loc_point << std::endl;
-  add_point_to_image(best_loc_point, new_map_image, "robot");
+  // optionally add laser scan to the map
+  if (p_hits_relative_map_pixel.size() > 0) {
+    auto best_loc_image_pose =
+        map_pixel_to_image_coords(best_loc_map_pixel, origin_px, img_height);
+    auto best_loc_point = get_cv_point(best_loc_image_pose);
+    // TODO
+    std::cout << "best_loc_point: " << best_loc_point << std::endl;
+    add_point_to_image(best_loc_point, new_map_image, "robot");
 
-  for (const auto &p_hit_relative_map : p_hits_relative_map_pixel) {
-    auto p_hit_absolute_map = best_loc_map_pixel + p_hit_relative_map;
-    auto p_hit_img =
-        map_pixel_to_image_coords(p_hit_absolute_map, origin_px, img_height);
-    auto p_hit_point = get_cv_point(p_hit_img);
-    add_point_to_image(p_hit_point, new_map_image, "");
+    for (const auto &p_hit_relative_map : p_hits_relative_map_pixel) {
+      auto p_hit_absolute_map = best_loc_map_pixel + p_hit_relative_map;
+      auto p_hit_img =
+          map_pixel_to_image_coords(p_hit_absolute_map, origin_px, img_height);
+      auto p_hit_point = get_cv_point(p_hit_img);
+      add_point_to_image(p_hit_point, new_map_image, "");
+    }
   }
   return new_map_image;
 }
-
-// if score > TEMPLATE_MATCHING_THRESHOLD:
-//     max_loc = max_loc[::-1]
-//     #TODO Remember to remove
-//     print(f'Rico: max_loc raw: {max_loc}')
-//     max_loc += relative_robot_poses_in_mat_theta
-//     max_loc_map_pose = matrix_coords_to_image_coords(
-//         np.array([max_loc]), origin_px, img_height
-//     )
-//     p_hits_for_theta_absolute = add_pose_to_relative_poses(
-//         [p_hits_for_all_thetas[theta_id]], max_loc_map_pose
-//     )
-//     scores.append(
-//         score
-//     )
-//     points.append(max_loc)
-//     p_hits.append(p_hits_for_theta_absolute)
-//     print("max_loc_map_pose", max_loc_map_pose, "score: ", score)
-// return scores, points, p_hits
 
 inline void visualize_map(const cv::Mat &map) {
   cv::imshow("Map Display", map);

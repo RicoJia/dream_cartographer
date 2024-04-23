@@ -22,31 +22,41 @@ int main(int argc, char *argv[]) {
   auto laser_scans = read_laser_scans_from_csv("data/laser_scans.csv");
   print_scans(laser_scans);
 
+  /** Getting data ready*/
   auto original_map_img = load_map_image(input_args.map_image_filename);
+  original_map_img =
+      downsize_image(original_map_img, input_args.downsize_factor);
   auto map_img = map_image_preprocessing(original_map_img);
   auto metadata = load_map_metadata(input_args.map_metadata_filename, map_img);
-  auto start = std::chrono::high_resolution_clock::now();
   std::cout << "metadata: " << metadata << std::endl;
+
+  /** Start the timer*/
+  auto start = std::chrono::high_resolution_clock::now();
+
+  /** Prepping data*/
   Eigen::Vector2i origin_xy_pixel =
       (-metadata.origin.head<2>() / metadata.resolution)
           .unaryExpr(RoundToInt());
-  // visualize_map(map_img);
+  origin_xy_pixel =
+      downsize_vector2i(origin_xy_pixel, input_args.downsize_factor);
   auto trial_scan_msg = laser_scans.at(input_args.trial_laser_scan_id);
+  downsize_laser_scan_msg(trial_scan_msg, input_args.downsize_factor);
   auto search_thetas = arange(0.0, 2 * M_PI, input_args.num_angular_seg);
   auto bearings = arange(0.0, 2 * M_PI, trial_scan_msg.size());
   std::cout << "origin_xy_pixel: "
             << origin_xy_pixel.format(print_in_one_line_format) << std::endl;
   std::cout << "trian scan msg size: " << trial_scan_msg.size() << std::endl;
-  // TODO
-  // std::cout<<"search_thetas:
-  // "<<search_thetas.format(print_in_one_line_format)<<std::endl;
-  // std::cout<<"bearings
-  // "<<bearings.format(print_in_one_line_format)<<std::endl;
-
-  // Optimization
+  std::cout << "downsize factor: " << input_args.downsize_factor << std::endl;
+  // [theta1[(x,y)...], theta2 [...]]
   auto p_hits_for_all_thetas = get_laser_endbeam_relative_for_all_thetas(
       search_thetas, bearings, trial_scan_msg, metadata.laser_max_range,
       metadata.resolution);
+
+  //   auto annoated_map_img = add_laser_scan_and_origin_to_map(
+  //       original_map_img, origin_xy_pixel, metadata.height);
+  //   visualize_map(annoated_map_img);
+
+  // Optimization
   // this is still relative to the body frame
   auto p_hits_for_all_thetas_matrix_coords = map_pixel_to_matrix_p_hits(
       p_hits_for_all_thetas, origin_xy_pixel, metadata.height);
@@ -104,11 +114,10 @@ int main(int argc, char *argv[]) {
                    .count()
             << "ms" << std::endl;
   auto annoated_map_img = add_laser_scan_and_origin_to_map(
-      original_map_img, best_loc_map_pixel, best_theta_id,
-      p_hits_for_all_thetas.at(best_theta_id), origin_xy_pixel,
-      metadata.height);
-  // for (const auto& i: p_hits_for_all_thetas_image_gradients)
-  // visualize_map(i);
+      original_map_img, origin_xy_pixel, metadata.height, best_loc_map_pixel,
+      p_hits_for_all_thetas.at(best_theta_id));
+  //   for (const auto& i: p_hits_for_all_thetas_image_gradients)
+  //   visualize_map(i);
   visualize_map(annoated_map_img);
   return 0;
 }
