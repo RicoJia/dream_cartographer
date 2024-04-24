@@ -182,10 +182,15 @@ matrix_coords_to_shifted_map(const Eigen::Vector2i &matrix_coords,
 }
 
 inline Eigen::Vector2i
-matrix_coords_to_image_coords(const Eigen::Vector2i &matrix_coords,
-                              const double &img_height) {
+matrix_coords_to_image_coords(const Eigen::Vector2i &matrix_coords) {
   // have to swap x and y for image visualization
   return Eigen::Vector2i(matrix_coords[1], matrix_coords[0]);
+}
+
+inline Eigen::Vector2i
+image_coords_to_matrix_coords(const Eigen::Vector2i &image_coords) {
+  // have to swap x and y for image visualization
+  return Eigen::Vector2i(image_coords[1], image_coords[0]);
 }
 
 // Second order transforms
@@ -226,7 +231,7 @@ map_pixel_to_image_coords(const Eigen::Vector2i &map_point,
   // have to swap x and y for image visualization
   auto matrix_coords =
       map_pixel_to_matrix_coords(map_point, origin_xy_pixel, img_height);
-  return matrix_coords_to_image_coords(matrix_coords, img_height);
+  return matrix_coords_to_image_coords(matrix_coords);
 }
 
 // ----------------------------------------------------------------
@@ -273,11 +278,23 @@ inline Eigen::Vector2i downsize_vector2i(const Eigen::Vector2i &vec,
                          static_cast<int>(vec[1] * 1.0 / downsize_factor));
 }
 
-inline void downsize_laser_scan_msg(std::vector<double> &scan_msg,
-                                    const unsigned int downsize_factor) {
-  for (int i = 0; i < scan_msg.size(); i++) {
-    scan_msg[i] = scan_msg[i] * 1.0 / downsize_factor;
+inline Eigen::Vector2i
+recover_size_vector2i(const Eigen::Vector2i &vec,
+                      const unsigned int downsize_factor) {
+  return Eigen::Vector2i(static_cast<int>(vec[0] * downsize_factor),
+                         static_cast<int>(vec[1] * downsize_factor));
+}
+
+inline std::vector<double>
+downsize_laser_scan_msg(const std::vector<double> &original_scan_msg,
+                        const unsigned int downsize_factor) {
+  auto scan_msg = original_scan_msg;
+  if (downsize_factor != 1.0) {
+    for (int i = 0; i < scan_msg.size(); i++) {
+      scan_msg[i] = scan_msg[i] * 1.0 / downsize_factor;
+    }
   }
+  return scan_msg;
 }
 
 // ----------------------------------------------------------------
@@ -293,10 +310,11 @@ inline cv::Mat map_image_preprocessing(const cv::Mat &map_image) {
 }
 
 inline std::vector<std::vector<Eigen::Vector2i>>
-get_laser_endbeam_relative_for_all_thetas(
-    Eigen::Ref<Eigen::VectorXd> search_thetas,
-    Eigen::Ref<Eigen::VectorXd> bearings, const std::vector<double> &scan_msg,
-    const double &laser_max_range, const double &resolution) {
+get_laser_endbeam_relative_for_all_thetas(const Eigen::VectorXd &search_thetas,
+                                          const Eigen::VectorXd &bearings,
+                                          const std::vector<double> &scan_msg,
+                                          const double &laser_max_range,
+                                          const double &resolution) {
   // return array doesn't have inf. And they are in pixelized map frame
   if (scan_msg.size() != bearings.size())
     throw std::runtime_error(
@@ -343,6 +361,7 @@ inline void generate_smallest_matrices_for_all_thetas(
   relative_robot_poses_in_mat =
       std::vector<Eigen::Vector2i>(p_hits_for_all_thetas.size());
   for (unsigned int i = 0; i < p_hits_for_all_thetas.size(); i++) {
+    // TODO: to extract this out
     int min_x = std::numeric_limits<int>::max();
     int min_y = std::numeric_limits<int>::max();
     int max_x = 0;
@@ -402,17 +421,13 @@ find_score(const cv::Mat &binary_map_image, const unsigned int &theta_id,
     cv::matchTemplate(binary_map_image, templ, res, cv::TM_CCOEFF);
   }
 
-  // cv::normalize(res, res, 0, 1, cv::NORM_MINMAX, -1);
   double min_val, max_val;
   cv::Point min_loc, max_loc;
   cv::minMaxLoc(res, &min_val, &max_val, &min_loc, &max_loc);
   // Important: cv2.minMaxLoc returns the reversed  matrix index [y,x]
-  Eigen::Vector2i max_loc_vec(max_loc.y, max_loc.x);
-  // TODO
-  //   std::cout<<"raw max_loc_vec: "<<max_loc_vec<<std::endl;
-  max_loc_vec += relative_robot_pose_in_mat;
-  //   std::cout<<"relative max_loc_vec:
-  //   "<<max_loc_vec.format(print_in_one_line_format)<<std::endl;
+  //   Eigen::Vector2i max_loc_vec(max_loc.y, max_loc.x);
+  //   max_loc_vec += relative_robot_pose_in_mat;
+  Eigen::Vector2i max_loc_vec(max_loc.x, max_loc.y);
   return std::make_tuple(max_val, max_loc_vec, theta_id);
 }
 
@@ -464,6 +479,30 @@ inline cv::Mat add_laser_scan_and_origin_to_map(
 }
 
 inline void visualize_map(const cv::Mat &map) {
-  cv::imshow("Map Display", map);
+  // Screen dimensions (you can adjust these)
+  int screen_width = 1920;
+  int screen_height = 1080;
+
+  // Calculate the aspect ratio of the image
+  double aspect_ratio = double(map.cols) / map.rows;
+
+  // Determine new dimensions while preserving aspect ratio
+  int new_width = map.cols;
+  int new_height = map.rows;
+
+  if (map.cols > screen_width) {
+    new_width = screen_width;
+    new_height = int(new_width / aspect_ratio);
+  }
+  if (new_height > screen_height) {
+    new_height = screen_height;
+    new_width = int(new_height * aspect_ratio);
+  }
+
+  // Resize image
+  cv::Mat resized_map;
+  cv::resize(map, resized_map, cv::Size(new_width, new_height));
+
+  cv::imshow("Map Display", resized_map);
   cv::waitKey(0);
 }
