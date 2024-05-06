@@ -9,6 +9,7 @@
 // Doc: Transforms used in this program:
 // https://github.com/RicoJia/The-Dream-Robot/assets/39393023/9e8e8784-c5c4-431c-ad39-1c93fd9bcda5
 
+// TODO: 1. free / occupancy thresholding
 #include "2dlocalizer.hpp"
 #include "ThreadPool.h"
 #include <algorithm>
@@ -161,6 +162,18 @@ void show_results(
       original_map_img, origin_xy_pixel, metadata.height, best_loc_map_pixel,
       p_hits_for_all_thetas.at(best_theta_id));
   visualize_map(annoated_map_img);
+
+  // Showing candidate locations
+  // for (unsigned int i = 0; i < theta_ids.size(); ++i){
+  //     const auto& loc_map_pixel = candidate_map_coords.at(i);
+  //     auto theta_id = theta_ids.at(i);
+  //     auto loc_img_pixel = map_pixel_to_image_coords(
+  //         loc_map_pixel, origin_xy_pixel, metadata.height);
+  //     auto annoated_map_img = add_laser_scan_and_origin_to_map(
+  //         original_map_img, origin_xy_pixel, metadata.height, loc_map_pixel,
+  //         p_hits_for_all_thetas.at(theta_id));
+  //     visualize_map(annoated_map_img);
+  // }
 }
 
 int main(int argc, char *argv[]) {

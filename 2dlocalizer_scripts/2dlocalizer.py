@@ -7,28 +7,22 @@ TODOs:
 3. Need laser scan effective ranges
 """
 
-import yaml
 
 # import matplotlib.image as mpimg
 import pickle
-import numpy as np
-from typing import List, Tuple, Dict, Deque
 import time
-from localizer_2d_utils import (
-    get_vector_1_pixel_away_vectorized,
-    map_pixel_to_matrix,
-    create_mask,
-    MapValue,
-    matrix_to_map_pixel,
-    add_pose_to_relative_poses,
-    get_points_on_search_grid,
-    get_gradient_mat,
-    get_binary_image,
-)
-import cv2
-import os
-from multiprocessing import Pool
 from collections import deque
+from multiprocessing import Pool
+from typing import Deque, Dict, List, Tuple
+
+import cv2
+import numpy as np
+from localizer_2d_utils import (MapValue, add_pose_to_relative_poses,
+                                create_mask, get_file_path_in_the_same_folder,
+                                get_gradient_mat,
+                                get_vector_1_pixel_away_vectorized,
+                                load_map_and_meta_data, map_pixel_to_matrix,
+                                matrix_to_map_pixel, rgba_to_grayscale)
 
 SEARCH_GRID_RESOLUTION = 4  # 0.2m
 BEAM_SEARCH_KERNEL_SIZE = 2
@@ -37,23 +31,6 @@ BEAM_NOICE_VARIANCE = 0.1  # in meter
 NUM_ANGULAR_SEG = 128
 # NUM_ANGULAR_SEG = 4
 TEMPLATE_MATCHING_THRESHOLD = 0.25
-
-
-def get_file_path_in_the_same_folder(filename):
-    # To get the full, absolute file path
-    absolute_file_path = os.path.abspath(__file__)
-    dir_name = os.path.dirname(absolute_file_path)
-    return os.path.join(dir_name, filename)
-
-
-def load_map_and_meta_data(img_path, metadata_path):
-    # Replace 'map.yaml' with the path to your uploaded YAML file
-    with open(metadata_path, "r") as file:
-        map_metadata = yaml.safe_load(file)
-    # Replace 'map.pgm' with the path to your uploaded PGM file
-    # map_image = mpimg.imread(img_path)
-    map_image = cv2.imread(img_path)
-    return map_metadata, map_image
 
 
 def map_px_to_plot_coordinates(map_px, origin):
@@ -215,18 +192,6 @@ def downsample(image, factor):
         image, (new_width, new_height), interpolation=cv2.INTER_NEAREST
     )
     return downsampled_image
-
-
-def rgba_to_grayscale(map_image):
-    try:
-        if map_image.shape[2] == 4:
-            return cv2.cvtColor(map_image, cv2.COLOR_BGRA2GRAY)
-        elif map_image.shape[2] == 3:
-            return cv2.cvtColor(map_image, cv2.COLOR_BGR2GRAY)
-        else:
-            return map_image
-    except Exception:
-        return map_image
 
 
 def generate_smallest_matrix(point_list, orig_in_matrix_coord: np.ndarray):

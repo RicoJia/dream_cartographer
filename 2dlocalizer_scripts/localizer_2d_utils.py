@@ -1,8 +1,11 @@
-import numpy as np
+import os
+from copy import deepcopy
 from enum import Enum
 from typing import List
-from copy import deepcopy
+
 import cv2
+import numpy as np
+import yaml
 
 
 class MapValue(Enum):
@@ -12,16 +15,33 @@ class MapValue(Enum):
     FREE = 254
 
 
-# def get_search_grid_points(
-#     map_image: np.ndarray, img_width: int, img_height: int
-# ) -> np.ndarray:
-#     search_grid_points = []
-#     for x in range(0, img_height, SEARCH_GRID_RESOLUTION):
-#         for y in range(0, img_width, SEARCH_GRID_RESOLUTION):
-#             if map_image[x, y] == MapValue.FREE.value:
-#                 # each pose: [x,y,theta]
-#                 search_grid_points.append(np.array([x, y]))
-#     return np.asarray(search_grid_points).astype(int)
+def get_file_path_in_the_same_folder(filename):
+    # To get the full, absolute file path
+    absolute_file_path = os.path.abspath(__file__)
+    dir_name = os.path.dirname(absolute_file_path)
+    return os.path.join(dir_name, filename)
+
+
+def load_map_and_meta_data(img_path, metadata_path):
+    # Replace 'map.yaml' with the path to your uploaded YAML file
+    with open(metadata_path, "r") as file:
+        map_metadata = yaml.safe_load(file)
+    # Replace 'map.pgm' with the path to your uploaded PGM file
+    # map_image = mpimg.imread(img_path)
+    map_image = cv2.imread(img_path)
+    return map_metadata, map_image
+
+
+def rgba_to_grayscale(map_image):
+    try:
+        if map_image.shape[2] == 4:
+            return cv2.cvtColor(map_image, cv2.COLOR_BGRA2GRAY)
+        elif map_image.shape[2] == 3:
+            return cv2.cvtColor(map_image, cv2.COLOR_BGR2GRAY)
+        else:
+            return map_image
+    except Exception:
+        return map_image
 
 
 def get_points_on_search_grid(
@@ -66,6 +86,19 @@ def get_vector_1_pixel_away_vectorized(starts: np.ndarray, end: np.ndarray):
     return unit_vecs
 
 
+###################################################################################
+# map -> img Transforms
+###################################################################################
+def map_pixel_to_matrix_single(
+    map_pixel: np.ndarray, origin_px: np.ndarray, img_height: float
+):
+    map_point = deepcopy(map_pixel)
+    map_point += origin_px
+    map_point[1] = img_height - map_point[1]
+    map_point = map_point[::-1]
+    return map_point
+
+
 def map_pixel_to_matrix(
     points_for_all_thetas: List[np.ndarray], origin_px: np.ndarray, img_height: float
 ):
@@ -92,6 +125,39 @@ def matrix_to_map_pixel(
     return matrix_indices.astype(int)
 
 
+def matrix_coords_to_image_coords(matrix_coords):
+    return matrix_coords[::-1]
+
+
+def map_to_img_pixel(map_point: np.ndarray, origin_px: np.ndarray, img_height: float):
+    matrix_coords = map_pixel_to_matrix_single(map_point, origin_px, img_height)
+    return matrix_coords_to_image_coords(matrix_coords)
+
+
+###################################################################################
+# img -> map Transforms
+###################################################################################
+def img_pixel_to_matrix_coords(image_coords):
+    return image_coords[::-1]
+
+
+def matrix_coords_to_shifted_map(matrix_coords, img_height):
+    return np.array([matrix_coords[1], img_height - matrix_coords[0]])
+
+
+def shifted_map_to_map(shifted_map_point, origin_xy_pixel):
+    return shifted_map_point - origin_xy_pixel
+
+
+def img_pixel_to_map(image_coords, img_height, origin_px):
+    matrix_coords = img_pixel_to_matrix_coords(image_coords)
+    shifted_map_point = matrix_coords_to_shifted_map(matrix_coords, img_height)
+    return shifted_map_to_map(shifted_map_point, origin_px)
+
+
+###################################################################################
+# Img utils
+###################################################################################
 def add_pose_to_relative_poses(
     p_hits_for_all_thetas: List[np.ndarray], pose: np.ndarray
 ):

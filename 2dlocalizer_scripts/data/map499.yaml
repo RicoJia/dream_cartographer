@@ -1,0 +1,6 @@
+image: map499.png
+resolution: 0.050000
+origin: [-29.937170028686523, -68.2052001953125, 0.0]
+occupied_thresh: 0.65
+free_thresh: 0.196
+negate: 0
