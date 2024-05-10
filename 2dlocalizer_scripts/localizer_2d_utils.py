@@ -16,7 +16,14 @@ class MapValue(Enum):
 
 
 def get_file_path_in_the_same_folder(filename):
-    # To get the full, absolute file path
+    """To get the full, absolute file path
+
+    Args:
+        filename (_type_): Single file name 
+
+    Returns:
+        _type_: _description_
+    """
     absolute_file_path = os.path.abspath(__file__)
     dir_name = os.path.dirname(absolute_file_path)
     return os.path.join(dir_name, filename)
@@ -152,7 +159,7 @@ def shifted_map_to_map(shifted_map_point, origin_xy_pixel):
 def img_pixel_to_map(image_coords, img_height, origin_px):
     matrix_coords = img_pixel_to_matrix_coords(image_coords)
     shifted_map_point = matrix_coords_to_shifted_map(matrix_coords, img_height)
-    return shifted_map_to_map(shifted_map_point, origin_px)
+    return shifted_map_to_map(shifted_map_point, origin_px).astype(np.int16)
 
 
 ###################################################################################

@@ -19,10 +19,12 @@ import numpy as np
 from localizer_2d_utils import (MapValue, get_file_path_in_the_same_folder,
                                 img_pixel_to_map, load_map_and_meta_data,
                                 map_to_img_pixel, rgba_to_grayscale)
+import matplotlib.pyplot as plt
 
 # Must be integer, this is relative to the map resolution
-GRID_STEP_MULTIPLIER = 3
+GRID_STEP_MULTIPLIER = 300
 SAVED_DATA_FOLDER = "data"
+NUM_ANGLES = 360
 # in meters
 MAX_RANGE = 6
 
@@ -42,6 +44,8 @@ def get_paths():
     BENCHMARK_POSES_FILE = (
         f"{prepended_map_name}_poses_{GRID_STEP_MULTIPLIER}.csv"
     )
+    img_path = get_file_path_in_the_same_folder(img_path)
+    metadata_path = get_file_path_in_the_same_folder(metadata_path)
     benchmark_poses_path = get_file_path_in_the_same_folder(
         BENCHMARK_POSES_FILE
     )
@@ -55,16 +59,12 @@ def get_paths():
         benchmark_range_data_path,
     )
 
-
-def generate_grid_poses(
-    map_metadata, map_image, origin_px
-) -> List[np.ndarray]:
-    """Return the map pixel poses on a grid that are free pixels"""
-    # the grid is like a checker board
+def get_free_map_img(map_image, map_metadata):
     height, width = map_image.shape
     free_thresh, negate = map_metadata["free_thresh"], bool(
         map_metadata["negate"]
     )
+    """Return a boolean map of free cells (free = True)"""
     # This section comes straight from http://wiki.ros.org/map_server
     if negate:
         # val < int_free_thresh are free val > int_occupied_thresh are occupied
@@ -77,31 +77,29 @@ def generate_grid_poses(
         free_map_img = map_image > int_free_thresh
         # TODO Remember to remove
         print(f"Negating the map")
+    return free_map_img
 
+def generate_grid_poses(
+    map_metadata, free_map_img, origin_px
+) -> List[np.ndarray]:
+    """Return the map pixel poses on a grid that are free pixels"""
+    # the grid is like a checker board
+
+    height, width = free_map_img.shape
     map_poses = list()
-    for hx in range(GRID_STEP_MULTIPLIER, height, GRID_STEP_MULTIPLIER):
-        for hy in range(GRID_STEP_MULTIPLIER, width, GRID_STEP_MULTIPLIER):
-            if free_map_img[hx, hy] == True:
+    for hy in range(GRID_STEP_MULTIPLIER, height, GRID_STEP_MULTIPLIER):
+        for hx in range(GRID_STEP_MULTIPLIER, width, GRID_STEP_MULTIPLIER):
+            if free_map_img[hy, hx] == True:
                 map_pixel_point = img_pixel_to_map(
                     image_coords=np.array((hx, hy)),
                     img_height=height,
                     origin_px=origin_px,
                 )
-                theta = np.random.uniform(0, 2 * np.pi)
+                # TODO
+                # theta = np.random.uniform(0, 2 * np.pi)
+                theta = 0.0
                 map_poses.append(np.append(map_pixel_point, [theta]))
     return map_poses
-
-
-def synthesize_ray_tracing_data(
-    max_range_pixel: np.ndarray,
-    map_poses: List[np.ndarray],
-    map_image: np.ndarray,
-    benchmark_range_data_path: str,
-):
-    # [x, y, theta], theta is relative to the orthogonal map pose
-    for pose in map_poses:
-        pass
-        # TODO: save simulated range data
 
 
 def save_grid_poses(map_poses, benchmark_poses_path):
@@ -110,7 +108,6 @@ def save_grid_poses(map_poses, benchmark_poses_path):
         writer.writerow(["x", "y", "theta"])
         for row in map_poses:
             writer.writerow(row)
-    # TODO Remember to remove
     print(f"Rico: saved to {benchmark_poses_path}")
 
 
@@ -124,7 +121,7 @@ def find_existing_grid_poses(
     with open(benchmark_poses_path, "r") as poses_file:
         reader = csv.DictReader(poses_file)
         for row in reader:
-            poses.append(np.array([row["x"], row["y"], row["theta"]]))
+            poses.append(np.array([int(float(row["x"])), int(float(row["y"])), float(row["theta"])]))
 
     row_count = 0
     try:
@@ -139,6 +136,150 @@ def find_existing_grid_poses(
     return return_list
 
 
+def bresenham_line(start: np.ndarray, end: np.ndarray) -> List:
+    delta = np.abs(end - start)
+    step = delta / (end - start)
+    dx, dy = delta[0], delta[1]
+    sx, sy = step[0], step[1]
+    x, y = start[0], start[1]
+    return_pixels = []
+    if dx > dy:
+        err = dy / 2
+        while x != end[0]:
+            return_pixels.append(np.array([x, y], dtype=int))
+            err += dy
+            if err > dx:
+                y += sy
+                err -= sx
+            x += sx
+    else:
+        err = dx /2
+        while y != end[1]:
+            return_pixels.append(np.array([x,y], dtype=int))
+            err += dx
+            if err > dy:
+                x += sx
+                err -= dy
+            y += sy
+    return_pixels.append(end)    
+    return return_pixels
+            
+def test_bresenham_line():
+    start = np.array([0,0])
+    end = np.array([-3,-4])
+    pixels = bresenham_line(start=start, end=end)
+    x_vals, y_vals = zip(*pixels)
+
+    # What does this do?
+    plt.figure(figsize=(6,6))
+    plt.plot(x_vals, y_vals, 'ro-')
+    plt.grid(True)
+    plt.show()
+
+
+def synthesize_ray_tracing_data(
+    max_range_pixel: np.ndarray,
+    map_poses: List[np.ndarray],
+    free_map_img: np.ndarray,
+    benchmark_range_data_path: str,
+    origin_px: np.ndarray,
+):
+    height, width = free_map_img.shape
+    angles = np.arange(0, 2 * np.pi, 2 * np.pi/NUM_ANGLES)
+    # [x, y, theta], theta is relative to the orthogonal map pose
+    right_on_bounds = lambda a, upper_bound: a ==0 or a == upper_bound
+    all_range_data = deque()
+    for pose in map_poses:
+        xy = pose[:2]
+        theta = pose[2]
+        img_pixel = map_to_img_pixel(map_point = xy, origin_px=origin_px, img_height=height).astype(int)
+        range_data = deque()
+        # TODO - to remove
+        debug_occupied_cells = []
+        for angle in angles:
+            theta_map = theta + angle
+            end_point = (img_pixel + max_range_pixel * np.array([np.cos(theta_map), np.sin(theta_map)])).astype(int)
+            points = bresenham_line(start=img_pixel, end=end_point)
+            max_range_hit = False
+            for i in range(len(points)):
+                p = points[i]
+                # must swap y and x for img coords
+                if right_on_bounds(p[0], height-1) or right_on_bounds(p[1], width-1) or \
+                    not free_map_img[p[1], p[0]]:
+                    map_distance = i/len(points) * MAX_RANGE
+                    range_data.append(map_distance)
+                    max_range_hit = True
+                    # TODO 
+                    map_endbeam = img_pixel_to_map(p, img_height=height, origin_px=origin_px)
+                    debug_occupied_cells.append(map_endbeam)
+                    break
+            if not max_range_hit:
+                range_data.append(MAX_RANGE)
+                #TODO
+                map_endbeam = img_pixel_to_map(end_point, img_height=height, origin_px=origin_px)
+                debug_occupied_cells.append(map_endbeam)
+            # #TODO Remember to remove
+            print(f'==============================================================================')
+            # print(f'start: img_pixel: {img_pixel} end: {end_point}')
+            # #TODO Remember to remove
+            # print(f'Range data: {range_data}')
+            # #TODO Remember to remove
+            print(f'Debug Occupied Cells: {debug_occupied_cells}')
+        all_range_data.append(range_data)            
+        # TODO
+        debug_viz(debug_occupied_cells, free_binary_map, pose)
+    return all_range_data
+
+def debug_viz(debug_occupied_cells, map_image, robot_pose=None):
+    origin_x_px, origin_y_px = origin_px
+    plt.figure(figsize=(10, 10))
+    img_width = map_image.shape[1]
+    img_height = map_image.shape[0]
+    x_ticks = np.arange(-origin_x_px, img_width - origin_x_px)
+    y_ticks = np.arange(-origin_y_px, img_height - origin_y_px)
+    plt.imshow(
+        map_image,
+        cmap="gray",
+        extent=[x_ticks[0], x_ticks[-1], y_ticks[0], y_ticks[-1]],
+    )  # Maps are often best visualized in grayscale
+
+    plt.title("Map Visualization")
+    plt.xlabel("Matrix Y(plot X)")
+    plt.ylabel("Matrix X(plot Y)")
+    map_origin_px = np.array([0, 0, 0])
+    plt.plot(map_origin_px[0], map_origin_px[1], "ro")  # Red dot
+    plt.text(map_origin_px[0], map_origin_px[1], "Origin", color="red")
+
+    if robot_pose is not None:
+        plt.plot(robot_pose[0], robot_pose[1], "go")  # Green dot
+        plt.text(robot_pose[0], robot_pose[1], "robot", color="purple")
+    # One Big Difference between matplotlib plot and np array is x and y in np array row major.
+    # The visualization here is column major.
+    def show_scatter_plot(points: List[np.ndarray], color: str, label: str):
+        x_coords = [xy[0] for xy in points]
+        y_coords = [xy[1] for xy in points]
+
+        plt.scatter(
+            x_coords, y_coords, c=color, marker="o", label=label, s=2, linewidths=0.05
+        )
+        # Adding a legend to identify the points
+        plt.legend()
+
+    show_scatter_plot(
+        points=debug_occupied_cells, color="red", label="Laser Endpoints"
+    )
+
+
+    plt.show()
+    
+
+def visualize_map_with_range_data(
+        synthesized_range_data,
+        unfinished_grid_poses,
+        map_image
+    ):
+    pass
+
 if __name__ == "__main__":
     (
         img_path,
@@ -146,10 +287,13 @@ if __name__ == "__main__":
         benchmark_poses_path,
         benchmark_range_data_path,
     ) = get_paths()
+    #TODO Remember to remove
+    print(f'Rico: metadata path: {img_path}')
     map_metadata, map_image = load_map_and_meta_data(
         img_path=img_path, metadata_path=metadata_path
     )
     map_image = rgba_to_grayscale(map_image)
+    free_binary_map = get_free_map_img(map_image, map_metadata)
     resolution = map_metadata["resolution"]
     origin_px = (
         np.array([-map_metadata["origin"][0], -map_metadata["origin"][1]])
@@ -162,7 +306,7 @@ if __name__ == "__main__":
     )
     if not unfinished_grid_poses:
         grid_poses = generate_grid_poses(
-            map_metadata=map_metadata, map_image=map_image, origin_px=origin_px
+            map_metadata=map_metadata, free_map_img=free_binary_map, origin_px=origin_px
         )
         save_grid_poses(
             map_poses=grid_poses, benchmark_poses_path=benchmark_poses_path
@@ -172,6 +316,12 @@ if __name__ == "__main__":
     synthesized_range_data = synthesize_ray_tracing_data(
         max_range_pixel=MAX_RANGE / resolution,
         map_poses=unfinished_grid_poses,
-        map_image=map_image,
+        free_map_img=free_binary_map,
         benchmark_range_data_path=benchmark_range_data_path,
+        origin_px=origin_px,
+    )
+    visualize_map_with_range_data(
+        synthesized_range_data,
+        unfinished_grid_poses,
+        map_image
     )
