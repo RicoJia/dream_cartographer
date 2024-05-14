@@ -1,13 +1,66 @@
 # Survey On Lidar SLAM
 
-## 2D LIDAR SLAM
-- gmapping
-- 
+## Graph Slam
+[Nice video](https://www.bilibili.com/video/BV1ut4y1X7f7/?spm_id_from=333.337.search-card.all.click)
+Construct a graph:
+1. A node is a pose with observation (Lidar, image, depth image)
+2. An edge is the homogeneous transform between 2 nodes
+
+### Goal
+- optimize all edges such that when a loop closure is detected, the loop node and the start of the graph 
+will be the same. That is, the loop->start Transform should be Identity transform. Each transform is like
+a spring. The more confident you are, the more stiff it is. 
+
+<p align="center">
+<img src="https://github.com/RicoJia/The-Dream-Robot/assets/39393023/268b8480-5cd7-4606-847d-1c3b5bf84d98" height="400" width="width"/>
+<figcaption align="center">Optimize Edges So The Last Edge Disappears!</figcaption>
+</p>
+
+So if you have a bad loop association, it will be bad. **Better miss a loop closure, than having a bad one**
+
+Also, edges of the current sliding window will be considered for optimization
+
+### G2O A General Framework for Graph Optimization
+[Paper](https://mengwenhe-cmu.github.io/Reading-Reports/Research/Localization/Graph_Optimization/g2o_A_General_Framework_for_Graph_Optimization/paper.pdf)
+[video](https://www.bilibili.com/video/BV1Ca41167Sb/?spm_id_from=333.337.search-card.all.click)
+
+We are using Gauss Newton / Levenberg-Marquardt optimization to carry out the optimization. These optimizations:
+- Are good for convex functions. So you might not find the global minimum
+- So they rely on the initial values of the parameters
+
+Implementation Example: [Little SLAM](https://github.com/furo-org/LittleSLAM/tree/master/framework)
+
+#### How to calculate Jacobian 
+- Finite difference method
+    ```
+
+
+    
+    ```
+
 ## 3D Lidar SLAM
+
+- How does tesla build its low occupancy map?
+    - Some of the foundamental challenges
+    - Mislocalization (Lidar hijacking)
+    - Else?
+    - FSD (since March 2023) is "vision only"
+        - Traditionally, builds HD map (High Definition)
+        - When radar and vision disagrees, what do you do? Doubling down on camera, because it's so much more accurate
+
+    - They want to estimate how fast pedestrians are travelling at, a supervised learning problem.
+        - Large dataset (millions of videos)
+        - Clean (labeled data, depth)
+        - Edge cases: not just nominal cases
+
 ALOAM
 Cartographer
 
 ## 3D Visual SLAM
+### ORB SLAM; GCN SLAM
+- orb features vs GCN (deep learned) features
+    - When there's a lot of texture, ORB can perform well. When images change fast, ORB features will "cluster", while GCN features 
+    are still evenly distributed. [Video](https://www.bilibili.com/video/BV1ei4y1F7HV/?spm_id_from=333.337.search-card.all.click)
 ### RTAB-MAP
 [paper](https://introlab.3it.usherbrooke.ca/mediawiki-introlab/images/7/7a/Labbe18JFR_preprint.pdf)
 [overview article](https://shivachandrachary.medium.com/introduction-to-3d-slam-with-rtab-map-8df39da2d293)

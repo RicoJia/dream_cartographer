@@ -91,3 +91,81 @@
         - Google Job post 
     - Ask people
 2. Udacity Computer Vision Crash Course: https://www.udacity.com/course/computer-vision-nanodegree--nd891
+
+========================================================================
+## Code Reading
+========================================================================
+- Cartographer
+```
+Submap 1:    Submap 2:
+
+  Node A       Node D ---- Node E
+    |            | \
+  Node B 
+    |                 \
+  Node C  \     -
+      (Possible loop closure constraint between C and D)
+```
+- each submap gets an initial pose from odom
+- Each overlap constraint and loop closure constraint is from ICP
+- Example:
+    1. Submap 1 A:   (x=0, y=0, theta=0), B (x=2, y=1, theta=30 degrees), C (x=4, y=2, theta=45 degrees)
+        1. adding A, then ICP, add B, ICP, add C.
+    2. Submap 2 D: ((x=4.5, y=2.5, theta=50 degrees)), E (x=6, y=4, theta=60 degrees) 
+    3. constraints in 1: T_AB, T_BC. in 2: T_DE
+    4. Detected loop closure: C, D
+        - Find ICP constraint: icp_cd
+        - Odometry constraints: 
+        - constraints to optimze:
+            - e_ab between A and B, 
+            - e_bc between B and C
+            - Cost function: F=∣∣eab−oab∣∣2+∣∣ebc−obc∣∣2+∣∣ecd−icpcd∣∣2 
+                - Rico: to confirm. I think cost should be based on Total scoring
+        - Compute Jacobian, and Hessian of F. calculate delta = -(HTH)-1 HTb
+
+- Little Slam
+    - Graph SLAM: Little SLAM
+    ```
+    SlamLauncher sl;
+    sl.run();
+      // ? SlamFrontEnd: SlamFrontEnd.h
+      // SlamBackEnd.h
+      sfront.process(scan);                // SLAMによる地図構築
+      mdrawer.drawMapGp(*pcmap);
+    ```
+    - SlamBackEnd
+        ```
+        Pose2D adjustPoses();
+            P2oDriver2D p2o;
+            p2o.doP2o(*pg, newPoses, 5);
+            // P2oDriver2D.cpp
+            p2o::Optimizer2D opt;                           
+            std::vector<p2o::Pose2D> result = opt.optimizePath(pnodes, pcons, N);
+
+        void remakeMaps(); 
+            // PointCloudMapの修正
+            pcmap->remakeMaps(newPoses);
+        ```
+    - `p2o.h`
+        ```
+        Vec3D calcError(const Pose2D &pa, const Pose2D &pb, const Pose2D &con, Mat3D &Ja, Mat3D &Jb)
+            // get x,y,theta difference (pa-pb) and con
+            Vec3D e0 = error_func(pa, pb, con);
+
+            p2o_float_t dx = pb.x - pa.x;
+            p2o_float_t dy = pb.y - pa.y;
+            // basically converting (pb-pa) into pa's coordinate frame
+            p2o_float_t dxdt = -sin(pa.th) * dx + cos(pa.th) * dy;
+            p2o_float_t dydt = -cos(pa.th) * dx - sin(pa.th) * dy;
+            // e = 2D Rotation * (dx, dy)
+            Ja << -cos(pa.th), -sin(pa.th), dxdt,
+                   sin(pa.th), -cos(pa.th), dydt,
+                            0,           0,   -1;
+            Jb <<  cos(pa.th), sin(pa.th),     0,
+                  -sin(pa.th), cos(pa.th),     0,
+                            0,          0,     1;
+
+        ```
+        - TODO: hwo optimization works?
+        - The g2o tutorial video
+        - Vslam skimming
