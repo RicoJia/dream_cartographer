@@ -56,6 +56,26 @@ Implementation Example: [Little SLAM](https://github.com/furo-org/LittleSLAM/tre
 ALOAM
 Cartographer
 
+### ICP
+PCL - Generalized Iterative Closest Point (G-ICP) Method
+icp(inital_guess, cloud1, cloud2)
+Start the algorithm with an initial guess. In SLAM, you can use odom information as one.
+Iteration starts
+Find Matching Point pairs between the two point clouds. using kd-tree
+Estimate Pose using Least Squares.
+Check for errors. If error is still significant, go back to step 2. Otherwise stop
+
+Step 3 is really key here. Here is how it goes
+objective: minimize sum(||R*p1+T-p2||²).Where we have rotation matrix R and translation T for the transform
+
+Least Squares Minimization Linear
+It's a standard approach for computing a set of solutions that minimizes total squared error of an "overdetermined system". An over determined system where you have more equations than unknown variables:
+$$
+2x + 3y = 26
+x + y = 10
+x - y =2
+$$
+
 ## 3D Visual SLAM
 ### ORB SLAM; GCN SLAM
 - orb features vs GCN (deep learned) features
