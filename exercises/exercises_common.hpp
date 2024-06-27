@@ -2,8 +2,8 @@
 #include <memory>
 #include <random>
 
-constexpr unsigned int SIMULATED_DATA_SIZE = 15;
-constexpr double std_dev = 0.2;
+constexpr unsigned int SIMULATED_DATA_SIZE = 35;
+constexpr double std_dev = 0.1;
 constexpr double A = 0.1;
 constexpr double B = 0.2;
 constexpr double C = 0.3;

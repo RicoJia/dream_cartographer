@@ -13,18 +13,21 @@
 #include <vector>
 
 // Alternative: you can explore manually using Jacobian
+/**
+  1. ceres::Jet can get directional direvatives
+    - this is the cost function: e = y - exp(ax^2 + bx + c).
+    - Then, residual is 1/2sum(|e|^2)
+  2. [a,b,c] why are we using T? - because it could be ceres::Jet, or double
+  3. Autodiff will do its optimization during compile time. It's faster and
+  more accurate than numerical diff because numerical diff is not templated
+ *
+ */
 struct CostFunctor {
   // Pass your data point here.
   CostFunctor(const double &x, const double &y) : x_(x), y_(y) {}
   const double x_;
   const double y_;
 
-  // 1. ceres::Jet can get directional direvatives
-  // this is the cost function, which is y - exp(ax^2 + bx + c). params here are
-  // [a,b,c] why are we using T? - because it could be ceres::Jet, or double
-  // 2. Residual is the total error term
-  // 3. Autodiff will do its optimization during compile time. It's faster and
-  // more accurate than numerical diff because numerical diff is not templated
   template <typename T> bool operator()(const T *params, T *residual) const {
     // These types are implicitly converted into ceres::Jet. so std::exp won't
     // work here
@@ -117,7 +120,7 @@ int main(int argc, char **argv) {
   // The variable to solve for with its initial value.
   double a = 0.3;
   double b = 0.4;
-  double c = 6;
+  double c = 0.6;
   double params_estimates[3] = {a, b, c};
 
   std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();

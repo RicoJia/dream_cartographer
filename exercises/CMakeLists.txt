@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(g2o REQUIRED)
+find_package(Ceres REQUIRED)
+find_library(GLOG_LIBRARY glog)
+find_path(GLOG_INCLUDE_DIR glog/logging.h)
+include_directories(${GLOG_INCLUDE_DIR})
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 # Add executable target
@@ -21,3 +25,6 @@ target_link_libraries(
   g2o::types_slam3d
   g2o::solver_eigen
   g2o::types_sba)
+
+add_executable(handcrafted_gauss_newton_opt handcrafted_gauss_newton_opt.cpp)
+target_link_libraries(handcrafted_gauss_newton_opt ceres ${GLOG_LIBRARY})
