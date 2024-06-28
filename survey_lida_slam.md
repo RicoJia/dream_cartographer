@@ -6,6 +6,8 @@ Construct a graph:
 1. A node is a pose with observation (Lidar, image, depth image)
 2. An edge is the homogeneous transform between 2 nodes
 
+[Nice Survey](https://blog.csdn.net/Kamfai_Row/article/details/106893979)
+
 ### Goal
 - optimize all edges such that when a loop closure is detected, the loop node and the start of the graph 
 will be the same. That is, the loop->start Transform should be Identity transform. Each transform is like
@@ -20,7 +22,7 @@ So if you have a bad loop association, it will be bad. **Better miss a loop clos
 
 Also, edges of the current sliding window will be considered for optimization
 
-### G2O A General Framework for Graph Optimization
+### General Graph Optimization (G2O) for SLAM/Bundle Adjustment Least Squares Graph Optimization
 [Paper](https://mengwenhe-cmu.github.io/Reading-Reports/Research/Localization/Graph_Optimization/g2o_A_General_Framework_for_Graph_Optimization/paper.pdf)
 [video](https://www.bilibili.com/video/BV1Ca41167Sb/?spm_id_from=333.337.search-card.all.click)
 
@@ -30,13 +32,21 @@ We are using Gauss Newton / Levenberg-Marquardt optimization to carry out the op
 
 Implementation Example: [Little SLAM](https://github.com/furo-org/LittleSLAM/tree/master/framework)
 
-#### How to calculate Jacobian 
+#### How to calculate Jacobian
+
 - Finite difference method
-    ```
 
+### Research Papers
+1. Karto: 
+    - Karto has a loop closure detection, and uses sparse matrix to solve. It can be used in large environment mapping
+    - Repos:    
+        - [slam karto, the backend](https://github.com/ros-perception/slam_karto/tree/melodic-devel)
+        - [Open Karto, the ros package](https://github.com/ros-perception/open_karto)
+    - Papers:
+        - [Real-Time Correlative Scan Matching](https://april.eecs.umich.edu/pdfs/olson2009icra.pdf)
+        - [Efficient Sparse Pose Adjustment for 2D Mapping](http://ais.informatik.uni-freiburg.de/publications/papers/konolige10iros.pdf)
 
-    
-    ```
+2. Cartographer TODO
 
 ## 3D Lidar SLAM
 
@@ -53,8 +63,6 @@ Implementation Example: [Little SLAM](https://github.com/furo-org/LittleSLAM/tre
         - Clean (labeled data, depth)
         - Edge cases: not just nominal cases
 
-ALOAM
-Cartographer
 
 ### ICP
 PCL - Generalized Iterative Closest Point (G-ICP) Method
@@ -68,25 +76,74 @@ Check for errors. If error is still significant, go back to step 2. Otherwise st
 Step 3 is really key here. Here is how it goes
 objective: minimize sum(||R*p1+T-p2||²).Where we have rotation matrix R and translation T for the transform
 
-Least Squares Minimization Linear
-It's a standard approach for computing a set of solutions that minimizes total squared error of an "overdetermined system". An over determined system where you have more equations than unknown variables:
-$$
-2x + 3y = 26
-x + y = 10
-x - y =2
-$$
+### ALOAM (great for beginners)
+
+Intro
+    - [Repo](https://gitcode.com/HKUST-Aerial-Robotics/A-LOAM/overview?utm_source=csdn_github_accelerator)
+    - When?
+
+Advantages:
+- Compared to LOAM: euler angles are changed to quaternion; 
+- Using Ceres
+
+### HDL Graph SLAM
+Intro: Simple graph based 3D lidar slam. In the front end, you can use ICP, NDT. 
+    - [Repo](https://gitcode.com/koide3/hdl_graph_slam/overview?utm_source=csdn_github_accelerator)
 
 ## 3D Visual SLAM
-### ORB SLAM; GCN SLAM
-- orb features vs GCN (deep learned) features
+
+### RGBD SLAM2 (Beginner Friendly， 2014)
+Resources:
+    - [Paper: Endres et al, 3D Mapping with an RGB-D camera, TRO, 2014.](http://www2.informatik.uni-freiburg.de/~endres/files/publications/endres13tro.pdf)
+    - [Repo](https://github.com/felixendres/rgbdslam_v2?tab=readme-ov-file)
+    - [Website](http://felixendres.github.io/rgbdslam_v2/)
+Intro
+    - see rgbd-slam-ros, 视觉slam 实战。There's feature extraction, optimization, loop detection, 3d point cloud, octomap, 非常全面. 
+    - Disadvantages:
+        - Using SIFT features (very slow), rendering pointcloud, so realtimeness sucks, and map building could get stuck.
+        - Key frame sampling frequency is high
+
+
+### GCN SLAM
+
+orb features vs GCN (deep learned) features
     - When there's a lot of texture, ORB can perform well. When images change fast, ORB features will "cluster", while GCN features 
     are still evenly distributed. [Video](https://www.bilibili.com/video/BV1ei4y1F7HV/?spm_id_from=333.337.search-card.all.click)
+
+### ORB-SLAM
+
+ORB-SLAM uses ORB features as feature detector and descriptor, which is robust against rotation and scale changes.
+A map is composed of keypoints and key frames.Also, it uses bag-of-words. 
+    - ORB-SLAM 1 by Tardos et al. in 2015. It's focused on robust SLAM solution
+    - ORB-SLAM 2 can work with stereo and RGBD camera in 2016
+    - ORB-SLAM 3 can work with multi-map stitching and visual inertial data.
+
 ### RTAB-MAP
-[paper](https://introlab.3it.usherbrooke.ca/mediawiki-introlab/images/7/7a/Labbe18JFR_preprint.pdf)
-[overview article](https://shivachandrachary.medium.com/introduction-to-3d-slam-with-rtab-map-8df39da2d293)
-[rtab map ros](https://github.com/introlab/rtabmap_ros)
-Compared to ORB-SLAM, the map is denser. 
-    - Multi-session mapping so it could recognize previously mapped areas and continue mapping; RTAB-MAP uses a SQLite database. [Paper](https://introlab.3it.usherbrooke.ca/mediawiki-introlab/images/e/eb/Labbe14-IROS.pdf)
+#### Intro 
+Resources:
+    - [paper](https://introlab.3it.usherbrooke.ca/mediawiki-introlab/images/7/7a/Labbe18JFR_preprint.pdf)
+    - [Principle (Mandarin)](https://blog.csdn.net/xmy306538517/article/details/78771104)
+    - [overview article](https://shivachandrachary.medium.com/introduction-to-3d-slam-with-rtab-map-8df39da2d293)
+    - [rtab map ros](https://github.com/introlab/rtabmap_ros)
+
+Advantages:
+    - Advantage: precise.
+    - Advantage: Compared to ORB-SLAM, the map is denser. 
+
+Disadvantages:
+    - Disadvantage: long map building time & light changes could affect re-localization
+    - Disadvantage: Using possion for point cloud voxelization, instead of TSDF (mainstream)?
+
+Inputs:
+    - TF between sensor and base
+    - Odom info
+    - Camera input (RGBD, or stereo) with calibration
+
+Outputs:
+    - Octomap
+    - Occupancy map
+
+- Multi-session mapping so it could recognize previously mapped areas and continue mapping; RTAB-MAP uses a SQLite database. [Paper](https://introlab.3it.usherbrooke.ca/mediawiki-introlab/images/e/eb/Labbe14-IROS.pdf)
     - Visual Loop Closure Detection:
         1. Extract features, have an index for each of these, then convert the image into a vector.
         2. Put them in a vocabulary tree
@@ -99,8 +156,36 @@ Compared to ORB-SLAM, the map is denser.
     - https://dev.to/admantium/ros-simultaneous-mapping-and-localization-with-rtabmap-2o09
     - SLAM Project: https://github.com/Robotics-lessons/term2-slam-project
 
+## Algorithm
+1. `create_location(image) -> L_t`
+    - Use surf to extract features. If there are enough features, rejuect (like a wall)
+    - Feature vector space will be incremental, that is, we don't need to pre-train. A vector is aka **signature**
+        - Use K-means to create new features. If you can find similar features, then the new feature can be aggregated into one? [Question]
+            - Yep, nearest neighbor distance ratio = $R=\frac{d_1}{d_2}$ where 1 is to the nearest neighbor, 2 is to the second nearest neighbor. If a new feature has NNDR lower than a threshold, then the feature is distinct and can be represented by it
+            - New feature is added when NNDR is below a ratio? **Could it be ambiguous features??**
+        - An image is a K-vector, where each element is a count
 
-#### SQLite Database
+2. Insert `L_(t)` into the STM
+    - Add a bi-directional link to previous time, $L_c$
+    - Similarity $s = N_{pair}/max(N_{zt}, N_{zc})$, where N is number of features. $N_{pair}$ is the common pairs of features. 
+    - If similar, $Z_c$ will be migrated into $Z_t$? $L_c$ will be deleted, and $L_t $weight will be $L_c+1$
+
+3. If STM size has reached threshold, 
+    - Move the oldest to WM
+
+4. Check for loop closure probablity $p(S_t|L_t)$ among $S_t$ in Working Memory (this is done in Bayesian Filter)
+    - If $S_t$ is found, built a loop closure link
+
+5. Join trash's thread? 
+6. Memory mgmt:
+    - Retrieval (L_i) LTM -> WM
+    - If $Image_processing_time > Thre$
+        - Transfer(WM->LTM), lowest weight, and oldest
+    
+
+## Appendix
+
+### SQLite Database
 SQLite Database is chosen because it's disk like, and no separate process is run; It could handle read-write more efficiently? 
     - Multiple processes can access the same database file directly at the same time
     - It's a classic "serverless" structure, meaning, the database engine runs in the same process, same thread as the application. 
@@ -115,10 +200,3 @@ Use cases:
 Other facts:
     - Written in C, most widely used database engine: found in safari, firefox, chrome. Started in 2000,
     
-
-### ORB-SLAM
-ORB-SLAM uses ORB features as feature detector and descriptor, which is robust against rotation and scale changes.
-A map is composed of keypoints and key frames.Also, it uses bag-of-words. 
-    - ORB-SLAM 1 by Tardos et al. in 2015. It's focused on robust SLAM solution
-    - ORB-SLAM 2 can work with stereo and RGBD camera in 2016
-    - ORB-SLAM 3 can work with multi-map stitching and visual inertial data.

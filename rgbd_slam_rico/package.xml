@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>rgbd_slam_rico</name>
+  <version>0.1.0</version>
+  <description>rgbd_slam_rico is a variant of RGBD slam</description>
+
+  <maintainer email="ruotongjia2020@u.northwestern.edu">rjia</maintainer>
+
+
+  <license>BSD</license>
+
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_export_depend>roscpp</build_export_depend>
+  <exec_depend>roscpp</exec_depend>
+
+  <build_depend>roslib</build_depend>
+  <exec_depend>roslib</exec_depend>
+  <build_depend>simple_robotics_ros_utils</build_depend>
+  <exec_depend>simple_robotiocs_ros_utils</exec_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+
+  <build_depend>cv_bridge</build_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <build_depend>opencv</build_depend>
+  <exec_depend>opencv</exec_depend>
+  <!-- <build_depend>image_transport</build_depend>
+  <exec_depend>image_transport</exec_depend> -->
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>
