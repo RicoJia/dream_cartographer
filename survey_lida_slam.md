@@ -1,12 +1,22 @@
 # Survey On Lidar SLAM
 
+What does SLAM do?
+
+Man, SLAM is hard. There has been research on it for 40+ years, but there are not so many in-depth but also beginner-resources on it. 
+
+
+
 ## Graph Slam
 [Nice video](https://www.bilibili.com/video/BV1ut4y1X7f7/?spm_id_from=333.337.search-card.all.click)
 Construct a graph:
 1. A node is a pose with observation (Lidar, image, depth image)
 2. An edge is the homogeneous transform between 2 nodes
 
-[Nice Survey](https://blog.csdn.net/Kamfai_Row/article/details/106893979)
+
+
+https://www.cnblogs.com/gaoxiang12/p/3695962.html
+
+
 
 ### Goal
 - optimize all edges such that when a loop closure is detected, the loop node and the start of the graph 
@@ -47,6 +57,11 @@ Implementation Example: [Little SLAM](https://github.com/furo-org/LittleSLAM/tre
         - [Efficient Sparse Pose Adjustment for 2D Mapping](http://ais.informatik.uni-freiburg.de/publications/papers/konolige10iros.pdf)
 
 2. Cartographer TODO
+    - [Mandarin Code Analysis](https://mp.weixin.qq.com/s/LdbFp-Zvkr02-_25ILb16g?)
+
+3. Gaoxiang Fan Club
+    - [高翔code](https://github.com/gaoxiang12/rgbd-slam-tutorial-gx/blob/master/part%20VII/src/detectFeatures.cpp)
+    - [Blog](https://www.cnblogs.com/gaoxiang12/p/4659805.html)
 
 ## 3D Lidar SLAM
 
@@ -125,6 +140,7 @@ Resources:
     - [Principle (Mandarin)](https://blog.csdn.net/xmy306538517/article/details/78771104)
     - [overview article](https://shivachandrachary.medium.com/introduction-to-3d-slam-with-rtab-map-8df39da2d293)
     - [rtab map ros](https://github.com/introlab/rtabmap_ros)
+    - [Good Mandarin ](https://blog.51cto.com/remyspot/1784914)
 
 Advantages:
     - Advantage: precise.
@@ -200,3 +216,5 @@ Use cases:
 Other facts:
     - Written in C, most widely used database engine: found in safari, firefox, chrome. Started in 2000,
     
+References:
+ Gao Xiang A story on SLAM: https://www.cnblogs.com/gaoxiang12/p/3695962.html

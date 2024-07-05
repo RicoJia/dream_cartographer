@@ -1,6 +1,9 @@
 #pragma once
 
+#include "simple_robotics_ros_utils/rosbag_helpers.hpp"
+#include <Eigen/Dense>
 #include <opencv2/features2d.hpp>
+#include <sensor_msgs/CameraInfo.h>
 #include <tuple>
 #include <vector>
 
@@ -8,6 +11,7 @@ namespace RgbdSlamRico {
 namespace enc = sensor_msgs::image_encodings;
 
 struct ORBFeatureDetectionResult {
+  // keypoints.pt are stored as float values for subpixel accuracy.
   std::vector<cv::KeyPoint> keypoints;
   cv::Mat descriptor;
   cv::Mat image_with_keypoints;
@@ -17,17 +21,29 @@ struct ORBFeatureDetectionResult {
   }
 };
 
-cv::Mat load_rgbd_images(SimpleRoboticsRosUtils::BagParser &bp,
-                         const std::string &image_topic_name) {
+struct HandyCameraInfo {
+  Eigen::Matrix3d K;
+};
+
+inline cv::Mat load_rgbd_images(SimpleRoboticsRosUtils::BagParser &bp,
+                                const std::string &image_topic_name) {
   auto msg = bp.next<sensor_msgs::Image>(image_topic_name);
-  // TODO
-  std::cout << "msg->image" << msg->height << std::endl;
   cv_bridge::CvImageConstPtr cv_ptr;
   cv_ptr = cv_bridge::toCvShare(msg, enc::BGR8);
   return cv_ptr->image;
 }
 
-ORBFeatureDetectionResult detect_orb_features(cv::Mat &image) {
+inline HandyCameraInfo load_camera_info(SimpleRoboticsRosUtils::BagParser &bp,
+                                        const std::string &camera_info_topic) {
+
+  auto msg = bp.next<sensor_msgs::CameraInfo>(camera_info_topic);
+  HandyCameraInfo cam_info;
+  cam_info.K =
+      Eigen::Map<Eigen::Matrix<double, 3, 3, Eigen::RowMajor>>(msg->K.data());
+  return cam_info;
+}
+
+inline ORBFeatureDetectionResult detect_orb_features(cv::Mat &image) {
   cv::Ptr<cv::ORB> orb = cv::ORB::create();
   ORBFeatureDetectionResult res;
   res.image = image;
@@ -39,7 +55,7 @@ ORBFeatureDetectionResult detect_orb_features(cv::Mat &image) {
   return res;
 }
 
-std::tuple<std::vector<cv::DMatch>, cv::Mat>
+inline std::tuple<std::vector<cv::DMatch>, cv::Mat>
 find_matches_and_draw_them(const ORBFeatureDetectionResult &res1,
                            const ORBFeatureDetectionResult &res2) {
   cv::BFMatcher matcher;
@@ -56,12 +72,12 @@ find_matches_and_draw_them(const ORBFeatureDetectionResult &res1,
     if (knn_match_pair[0].distance < lowe_ratio * knn_match_pair[1].distance)
       good_matches.emplace_back(knn_match_pair[0]);
   }
-  cv::Mat img_matches;
+  cv::Mat image_with_matches;
   drawMatches(res1.image, res1.keypoints, res2.image, res2.keypoints,
-              good_matches, img_matches, cv::Scalar::all(-1),
+              good_matches, image_with_matches, cv::Scalar::all(-1),
               cv::Scalar::all(-1), std::vector<char>(),
               cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-  return std::make_tuple(good_matches, img_matches);
+  return std::make_tuple(good_matches, image_with_matches);
 }
 
 }; // namespace RgbdSlamRico
