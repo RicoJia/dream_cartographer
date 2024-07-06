@@ -2,9 +2,13 @@
 #include <opencv2/calib3d.hpp>
 
 namespace RgbdSlamRico {
-//
-//
-// inputs: point matches, Intrinsics (fx, fy, c1, c2)
+constexpr double RANSAC_PROB_THRESHOLD = 0.99;
+// Given pixel p1 in image 1, and essential matrix E, ideally, the
+// epipolar line of the pixel of image 2 is Ep1, which corresponds to where its
+// match could land. So if your match is this threshold away, we don't think
+// it's valid
+constexpr int RANSAC_MAX_DIST_TO_EPIPOLAR_LINE = 1.5;
+
 /**
  * @brief Use 2D-2D methods to estimate R and t, through 8 point algorithms, and
  DLT homography.
@@ -14,7 +18,8 @@ namespace RgbdSlamRico {
  */
 inline void pose_estimate_2d2d(const ORBFeatureDetectionResult &res1,
                                const ORBFeatureDetectionResult &res2,
-                               const std::vector<cv::DMatch> &feature_matches) {
+                               const std::vector<cv::DMatch> &feature_matches,
+                               const cv::Mat &K) {
   // Find pixel points of the matches
   // The OpenCV official documentation is very vague about this. This is what's
   // happening: Given std::vector<cv::KeyPoint> keypoints each row contains
@@ -31,8 +36,6 @@ inline void pose_estimate_2d2d(const ORBFeatureDetectionResult &res1,
   for (const auto &match : feature_matches) {
     points1.emplace_back(res1.keypoints.at(match.queryIdx).pt);
     points2.emplace_back(res2.keypoints.at(match.trainIdx).pt);
-    // TODO
-    // std::cout<<"points1: "<<res1.keypoints.at(match.queryIdx).pt<<std::endl;
   }
 
   // Find fundamental matrix: just using the 8 equations and find a solution
@@ -40,13 +43,20 @@ inline void pose_estimate_2d2d(const ORBFeatureDetectionResult &res1,
   cv::Mat fundamental_matrix =
       findFundamentalMat(points1, points2, cv::FM_8POINT);
 
-  // TODO
+  // convert pixel points to canonical plane: x = (px - cx)/fx
+  // SVD -> get t1, t2, R1, R2. Open CV uses 5 point algorithm
+  cv::Mat essential_matrix, R, t;
+  essential_matrix = cv::findEssentialMat(points1, points2, K, cv::RANSAC,
+                                          RANSAC_PROB_THRESHOLD,
+                                          RANSAC_MAX_DIST_TO_EPIPOLAR_LINE);
+  // Estimate R and t. This function does "cheirality check"
+  // Which triangulates matched points, and chooses the R and t that yields
+  // positive z
+  cv::recoverPose(essential_matrix, points1, points2, K, R, t);
   std::cout << "F:" << std::endl << fundamental_matrix << std::endl;
-
-  // convert pixel points to canonical plane
-  // Estimate R and t
-  // SVD -> get t1, t2, R1, R2.
-  // Plug canonical point in? Get positive z.
+  std::cout << "E:" << std::endl << essential_matrix << std::endl;
+  std::cout << "R: " << R << std::endl;
+  std::cout << "t: " << t << std::endl;
 }
 
 } // namespace RgbdSlamRico

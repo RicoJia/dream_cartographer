@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
       SimpleRoboticsCppUtils::display_image(img_with_matches);
 
       // Part 2 SLAM Front end with 2D-2D Methods
-      pose_estimate_2d2d(last_orb_result, orb_res, good_matches);
+      pose_estimate_2d2d(last_orb_result, orb_res, good_matches, cam_info.K);
     }
     last_orb_result = std::move(orb_res);
   }

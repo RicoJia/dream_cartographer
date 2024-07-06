@@ -1,8 +1,8 @@
 #pragma once
 
 #include "simple_robotics_ros_utils/rosbag_helpers.hpp"
-#include <Eigen/Dense>
 #include <opencv2/features2d.hpp>
+#include <opencv2/opencv.hpp>
 #include <sensor_msgs/CameraInfo.h>
 #include <tuple>
 #include <vector>
@@ -22,7 +22,7 @@ struct ORBFeatureDetectionResult {
 };
 
 struct HandyCameraInfo {
-  Eigen::Matrix3d K;
+  cv::Mat K;
 };
 
 inline cv::Mat load_rgbd_images(SimpleRoboticsRosUtils::BagParser &bp,
@@ -38,8 +38,7 @@ inline HandyCameraInfo load_camera_info(SimpleRoboticsRosUtils::BagParser &bp,
 
   auto msg = bp.next<sensor_msgs::CameraInfo>(camera_info_topic);
   HandyCameraInfo cam_info;
-  cam_info.K =
-      Eigen::Map<Eigen::Matrix<double, 3, 3, Eigen::RowMajor>>(msg->K.data());
+  cam_info.K = cv::Mat(3, 3, CV_64FC1, msg->K.data());
   return cam_info;
 }
 
