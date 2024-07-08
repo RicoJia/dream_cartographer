@@ -25,8 +25,8 @@ struct HandyCameraInfo {
   cv::Mat K;
 };
 
-inline cv::Mat load_rgbd_images(SimpleRoboticsRosUtils::BagParser &bp,
-                                const std::string &image_topic_name) {
+inline cv::Mat load_next_image(SimpleRoboticsRosUtils::BagParser &bp,
+                               const std::string &image_topic_name) {
   auto msg = bp.next<sensor_msgs::Image>(image_topic_name);
   cv_bridge::CvImageConstPtr cv_ptr;
   cv_ptr = cv_bridge::toCvShare(msg, enc::BGR8);

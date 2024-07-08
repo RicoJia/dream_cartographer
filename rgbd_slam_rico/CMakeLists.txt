@@ -26,10 +26,17 @@ set(SIMPLE_ROBOTICS_CPP_UTILS_DIR
 add_subdirectory(${SIMPLE_ROBOTICS_CPP_UTILS_DIR}
                  ${CMAKE_BINARY_DIR}/simple_robotics_cpp_utils)
 
+add_library(${PROJECT_NAME}_dependencies INTERFACE)
+target_link_libraries(
+  ${PROJECT_NAME}_dependencies
+  INTERFACE ${catkin_LIBRARIES} ${rosbag_LIBRARIES} ${OpenCV_LIBRARIES}
+            simple_robotics_cpp_utils Eigen3::Eigen)
+
 include_directories(
   ${catkin_INCLUDE_DIRS} ${rosbag_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS}
   ${SIMPLE_ROBOTICS_CPP_UTILS_DIR}/include include)
 add_executable(orb_test src/orb_test.cpp)
-target_link_libraries(
-  orb_test ${catkin_LIBRARIES} ${rosbag_LIBRARIES} ${OpenCV_LIBRARIES}
-  simple_robotics_cpp_utils Eigen3::Eigen)
+target_link_libraries(orb_test ${PROJECT_NAME}_dependencies)
+
+add_executable(rgbd_rico_slam_mini src/rgbd_rico_slam_mini.cpp)
+target_link_libraries(rgbd_rico_slam_mini ${PROJECT_NAME}_dependencies)
