@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="rgbd_slam_rico" type="rgbd_rico_slam_mini" name="rgbd_rico_slam_mini" output="screen" />
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rgbd_slam_rico)/rviz/rgbd_rico_slam.rviz" />
+    
+</launch>

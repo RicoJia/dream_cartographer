@@ -62,6 +62,9 @@ Implementation Example: [Little SLAM](https://github.com/furo-org/LittleSLAM/tre
 3. Gaoxiang Fan Club
     - [高翔code](https://github.com/gaoxiang12/rgbd-slam-tutorial-gx/blob/master/part%20VII/src/detectFeatures.cpp)
     - [Blog](https://www.cnblogs.com/gaoxiang12/p/4659805.html)
+    - [Another Guy's blog](https://www.cnblogs.com/mafuqiang/p/8302663.html)
+
+4. [Comparison of The Graph-Optimization Frameworks G2O and SBA](http://mdh.diva-portal.org/smash/get/diva2:934179/FULLTEXT01.pdf)
 
 ## 3D Lidar SLAM
 
@@ -217,4 +220,4 @@ Other facts:
     - Written in C, most widely used database engine: found in safari, firefox, chrome. Started in 2000,
     
 References:
- Gao Xiang A story on SLAM: https://www.cnblogs.com/gaoxiang12/p/3695962.html
+Gao Xiang A story on SLAM: https://www.cnblogs.com/gaoxiang12/p/3695962.html

@@ -6,13 +6,20 @@
 #include <opencv2/calib3d.hpp>
 
 namespace RgbdSlamRico {
+
+/************************************** Constants
+ * **************************************/
 constexpr double RANSAC_PROB_THRESHOLD = 0.99;
 // Given pixel p1 in image 1, and essential matrix E, ideally, the
 // epipolar line of the pixel of image 2 is Ep1, which corresponds to where its
 // match could land. So if your match is this threshold away, we don't think
 // it's valid
 constexpr int RANSAC_MAX_DIST_TO_EPIPOLAR_LINE = 1.5;
+constexpr double MAX_DEPTH = 20.0;
+constexpr double MIN_DEPTH = 0.3;
 
+/************************************** Data Structures
+ * **************************************/
 struct PoseEstimate2D {
   cv::Mat F;
   cv::Mat E;
@@ -23,8 +30,12 @@ struct PoseEstimate2D {
 struct PoseEstimate3D {
   cv::Mat R;
   cv::Mat t;
+  std::vector<cv::Point3f> object_frame_points;
+  std::vector<cv::Point2f> current_camera_pixels;
 };
 
+/************************************** Functions
+ * **************************************/
 inline double compare_matrices_to_scale(const cv::Mat &m1, const cv::Mat &m2) {
   double scale_factor = SimpleRoboticsCppUtils::getFrobeniusNorm(m1) /
                         SimpleRoboticsCppUtils::getFrobeniusNorm(m2);
@@ -144,6 +155,71 @@ pose_estimate_2d2d(const ORBFeatureDetectionResult &res1,
   return pe;
 }
 
-inline PoseEstimate3D pose_estimate_3d2d() {}
+/**
+ * @brief Get data ready for Motion Estimation using 3D-2D correspondence
+ *
+ * @param object_frame_points : output 3D matched points in the object (world)
+ * frame
+ * @param current_camera_points : output 2D matched pixel in the current camera
+ * frame
+ * @param res1 : feature detection result of the previous image
+ * @param res2 : feature detection result of the current camera image
+ * @param feature_matches : OpenCV feature matching
+ * @param K : camera intrinsics
+ * @param depth1 : depth image associated with the previous image.
+ */
+inline void
+get_object_and_2d_points(std::vector<cv::Point3f> &object_frame_points,
+                         std::vector<cv::Point2f> &current_camera_pixels,
+                         const ORBFeatureDetectionResult &res1,
+                         const ORBFeatureDetectionResult &res2,
+                         const std::vector<cv::DMatch> &feature_matches,
+                         const cv::Mat &K, const cv::Mat &depth1) {
+  for (const cv::DMatch &match : feature_matches) {
+    auto previous_pt = res1.keypoints.at(match.queryIdx).pt;
+    double depth = depth1.at<float>(int(previous_pt.y), int(previous_pt.x));
+    if (std::isnan(depth) || depth < MIN_DEPTH || depth > MAX_DEPTH)
+      continue; // bad depth
+    // to canonical form, then to depth
+    auto p_canonical = SimpleRoboticsCppUtils::pixel2cam(previous_pt, K);
+    object_frame_points.emplace_back(p_canonical.x * depth,
+                                     p_canonical.y * depth, depth);
+    current_camera_pixels.emplace_back(res2.keypoints.at(match.trainIdx).pt);
+
+    // TODO
+    // std::cout<<"x: "<<p_canonical.x<<" y: "<< p_canonical.y << " depth:
+    // "<<depth << std::endl; std::cout<<"x: "<<p_canonical.x<<" y: "<<
+    // p_canonical.y << " depth: "<<depth << std::endl;
+  }
+}
+inline PoseEstimate3D
+pose_estimate_3d2d_opencv(const ORBFeatureDetectionResult &res1,
+                          const ORBFeatureDetectionResult &res2,
+                          const std::vector<cv::DMatch> &feature_matches,
+                          const cv::Mat &K, const cv::Mat &depth1) {
+  std::vector<cv::Point3f> object_frame_points;
+  std::vector<cv::Point2f> current_camera_pixels;
+  get_object_and_2d_points(object_frame_points, current_camera_pixels, res1,
+                           res2, feature_matches, K, depth1);
+
+  // for(auto p: object_frame_points) std::cout<<"3d p: "<<p<<std::endl;
+  cv::Mat r, t;
+
+  /**
+  cv::SOLVEPNP_DLS: "A Direct Least-Squares (DLS) Method for PnP"
+  cv::SOLVEPNP_P3P : "Complete Solution Classification for the
+  Perspective-Three-Point Problem". It needs 4 points exactly cv::SOLVEPNP_EPNP
+  : "Complete Solution Classification for the Perspective-Three-Point Problem".
+  It needs 4 points exactly cv::Mat() is distCoeffs
+   */
+  // TODO: to add our custom patches.
+  cv::solvePnP(object_frame_points, current_camera_pixels, K, cv::Mat(), r, t,
+               false, cv::SOLVEPNP_DLS);
+  cv::Mat R;
+  cv::Rodrigues(r, R);
+
+  return {R, t, std::move(object_frame_points),
+          std::move(current_camera_pixels)};
+}
 
 } // namespace RgbdSlamRico
