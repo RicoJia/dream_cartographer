@@ -1,0 +1,7 @@
+image_skip_batch_num: 25
+image_num: 6
+test_with_optimization: true
+do_ba_two_frames: true
+do_ba_backend: true
+pnp_method: "epnp"
+# pnp_method: "dls"

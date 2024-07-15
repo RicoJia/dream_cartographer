@@ -21,14 +21,6 @@ typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 
 namespace RgbdSlamRico {
 
-/************************************** Constants
- * **************************************/
-
-/************************************** Data Structures
- * **************************************/
-/************************************** Functions
- * **************************************/
-
 inline void _add_intrinsics(const HandyCameraInfo &cam_info,
                             g2o::SparseOptimizer &optimizer) {
   auto K_eigen =

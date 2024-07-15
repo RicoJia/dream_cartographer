@@ -36,6 +36,18 @@ struct PoseEstimate3D {
 
 /************************************** Functions
  * **************************************/
+
+inline int read_pnp_method(const std::string &method) {
+  if (method == "epnp")
+    return cv::SOLVEPNP_EPNP;
+  else if (method == "p3p")
+    return cv::SOLVEPNP_P3P;
+  else if (method == "dls")
+    return cv::SOLVEPNP_DLS;
+  else
+    return cv::SOLVEPNP_EPNP;
+}
+
 inline double compare_matrices_to_scale(const cv::Mat &m1, const cv::Mat &m2) {
   double scale_factor = SimpleRoboticsCppUtils::getFrobeniusNorm(m1) /
                         SimpleRoboticsCppUtils::getFrobeniusNorm(m2);
@@ -196,7 +208,8 @@ inline PoseEstimate3D
 pose_estimate_3d2d_opencv(const ORBFeatureDetectionResult &res1,
                           const ORBFeatureDetectionResult &res2,
                           const std::vector<cv::DMatch> &feature_matches,
-                          const cv::Mat &K, const cv::Mat &depth1) {
+                          const cv::Mat &K, const cv::Mat &depth1,
+                          const int &pnp_method_enum) {
   std::vector<cv::Point3f> object_frame_points;
   std::vector<cv::Point2f> current_camera_pixels;
   get_object_and_2d_points(object_frame_points, current_camera_pixels, res1,
@@ -214,7 +227,7 @@ pose_estimate_3d2d_opencv(const ORBFeatureDetectionResult &res1,
    */
   // TODO: to add our custom patches.
   cv::solvePnP(object_frame_points, current_camera_pixels, K, cv::Mat(), r, t,
-               false, cv::SOLVEPNP_DLS);
+               false, pnp_method_enum);
   cv::Mat R;
   cv::Rodrigues(r, R);
 
