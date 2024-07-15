@@ -70,85 +70,103 @@ void add_point_cloud(const Eigen::Isometry3d &pose, const cv::Mat &image,
   point_cloud->is_dense = false;
 }
 
-int main(int argc, char *argv[]) {
-  // Step 1: set up ros node, and parameters
-  ros::init(argc, argv, "rgbd_rico_slam_mini");
-  ros::NodeHandle nh;
-  int image_skip_batch_num;
-  int image_num;
-  bool test_with_optimization;
-  bool do_ba_two_frames;
-  bool do_ba_backend;
-  std::string pnp_method;
-  nh.getParam("image_skip_batch_num", image_skip_batch_num);
-  nh.getParam("image_num", image_num);
-  nh.getParam("test_with_optimization", test_with_optimization);
-  nh.getParam("pnp_method", pnp_method);
-  nh.getParam("do_ba_two_frames", do_ba_two_frames);
-  nh.getParam("do_ba_backend", do_ba_backend);
-  int pnp_method_enum = read_pnp_method(pnp_method);
-
-  // Step 2: bagparser, topics and camera info
-  ros::Publisher poses_pub =
-      nh.advertise<geometry_msgs::PoseArray>("optimized_poses", 1, true);
-  ros::Publisher points_pub =
-      nh.advertise<PointCloud>("optimized_points", 1, true);
-  constexpr auto PACKAGE_NAME = "rgbd_slam_rico";
-  SimpleRoboticsRosUtils::BagParser bp(nh, PACKAGE_NAME,
-                                       "/data/rgbd_dataset_freiburg1_xyz.bag");
-  constexpr auto RGB_TOPIC = "/camera/rgb/image_color";
-  bp.add_topic<sensor_msgs::Image>(RGB_TOPIC, false);
-  constexpr auto DEPTH_TOPIC = "/camera/depth/image";
-  bp.add_topic<sensor_msgs::Image>(DEPTH_TOPIC, false);
-  constexpr auto CAMERA_INFO_TOPIC = "/camera/rgb/camera_info";
-  HandyCameraInfo cam_info = load_camera_info(bp, CAMERA_INFO_TOPIC);
-  ORBFeatureDetectionResult last_orb_result;
-
-  PointCloud::Ptr point_cloud(new PointCloud);
-  point_cloud->header.frame_id = "camera";
-  point_cloud->height = point_cloud->width = 1;
-
-  std::vector<Eigen::Isometry3d> optimized_poses{Eigen::Isometry3d::Identity()};
-
-  for (unsigned int i = 0; i < image_num * image_skip_batch_num; i++) {
-    // Step 2: load images
-    auto image = load_next_image_TUM(bp, RGB_TOPIC, true);
-    auto depth_image = load_next_image_TUM(bp, DEPTH_TOPIC, false);
-    if (i % image_skip_batch_num != 0)
-      continue;
-    // Step 3: feature matching, and find depth
-    auto orb_res = detect_orb_features(image);
-    if (!last_orb_result.is_null()) {
-      Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
-
-      if (test_with_optimization) {
-        auto good_matches =
-            find_matches_and_draw_them(last_orb_result, orb_res, false);
-        // Step 4: find 3D "world frame coordinates". For simplicity, the world
-        // frame here is the first camera frame
-        PoseEstimate3D estimate_3d =
-            pose_estimate_3d2d_opencv(last_orb_result, orb_res, good_matches,
-                                      cam_info.K, depth_image, pnp_method_enum);
-        pose = SimpleRoboticsCppUtils::cv_R_t_to_eigen_isometry3d(
-            estimate_3d.R, estimate_3d.t);
-        // Step 5: further optimization
-        if (do_ba_two_frames) {
-          std::vector<Eigen::Vector3d> optimized_points;
-          bundle_adjustment_two_frames(estimate_3d, cam_info, pose,
-                                       optimized_points);
-        }
-        pose = optimized_poses.back() * pose;
-      }
-      optimized_poses.push_back(pose);
-      std::cout << "T: " << std::endl << pose.matrix() << std::endl;
-      add_point_cloud(pose, image, depth_image, cam_info, point_cloud);
+void debug_print_3D_points(const PoseEstimate3D &estimate, const HandyCameraInfo &cam_info,
+    Eigen::Isometry3d &pose){
+    // Transform object frame points (frame1) to frame 2
+    std::vector<Eigen::Vector3d> frame1_points, frame2_points;
+    frame1_points.resize(estimate.object_frame_points.size());
+    frame2_points.resize(estimate.current_camera_pixels.size());
+    for (const auto& point : estimate.object_frame_points){
+        Eigen::Vector3d p(point.x, point.y, point.z);
+        auto transformed_point = pose * p;
+        frame1_points.emplace_back(transformed_point);
     }
-    last_orb_result = std::move(orb_res);
-  }
-  if (do_ba_backend) {
-  }
-  visualize_slam_results(optimized_poses, poses_pub, points_pub, point_cloud);
-  ros::spin();
+    // Do these points share the same order?
+    // estimate.current_camera_pixels
 
-  return 0;
+}
+
+int main(int argc, char *argv[]) {
+    // Step 1: set up ros node, and parameters
+    ros::init(argc, argv, "rgbd_rico_slam_mini");
+    ros::NodeHandle nh;
+    int image_skip_batch_num;
+    int image_num;
+    bool test_with_optimization;
+    bool do_ba_two_frames;
+    bool do_ba_backend;
+    std::string pnp_method;
+    nh.getParam("image_skip_batch_num", image_skip_batch_num);
+    nh.getParam("image_num", image_num);
+    nh.getParam("test_with_optimization", test_with_optimization);
+    nh.getParam("pnp_method", pnp_method);
+    nh.getParam("do_ba_two_frames", do_ba_two_frames);
+    nh.getParam("do_ba_backend", do_ba_backend);
+    int pnp_method_enum = read_pnp_method(pnp_method);
+
+    // Step 2: bagparser, topics and camera info
+    ros::Publisher poses_pub =
+        nh.advertise<geometry_msgs::PoseArray>("optimized_poses", 1, true);
+    ros::Publisher points_pub =
+        nh.advertise<PointCloud>("optimized_points", 1, true);
+    constexpr auto PACKAGE_NAME = "rgbd_slam_rico";
+    SimpleRoboticsRosUtils::BagParser bp(nh, PACKAGE_NAME,
+                                        "/data/rgbd_dataset_freiburg1_xyz.bag");
+    constexpr auto RGB_TOPIC = "/camera/rgb/image_color";
+    bp.add_topic<sensor_msgs::Image>(RGB_TOPIC, false);
+    constexpr auto DEPTH_TOPIC = "/camera/depth/image";
+    bp.add_topic<sensor_msgs::Image>(DEPTH_TOPIC, false);
+    constexpr auto CAMERA_INFO_TOPIC = "/camera/rgb/camera_info";
+    HandyCameraInfo cam_info = load_camera_info(bp, CAMERA_INFO_TOPIC);
+    ORBFeatureDetectionResult last_orb_result;
+
+    // Step 3: initialize datastructure for optimization 
+    PointCloud::Ptr point_cloud(new PointCloud);
+    point_cloud->header.frame_id = "camera";
+    point_cloud->height = point_cloud->width = 1;
+    std::vector<Eigen::Isometry3d> optimized_poses{Eigen::Isometry3d::Identity()};
+
+    for (unsigned int i = 0; i < image_num * image_skip_batch_num; i++) {
+        // Step 4: load images
+        auto image = load_next_image_TUM(bp, RGB_TOPIC, true);
+        auto depth_image = load_next_image_TUM(bp, DEPTH_TOPIC, false);
+        if (i % image_skip_batch_num != 0)
+            continue;
+        // Step 5: feature Detection
+        auto orb_res = detect_orb_features(image);
+        if (!last_orb_result.is_null()) {
+            Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+            if (test_with_optimization) {
+                // Step 6: Match features
+                auto good_matches =
+                    find_matches_and_draw_them(last_orb_result, orb_res, false);
+                // Step 7: find 3D "world frame coordinates" through pnp. For simplicity, the world
+                // frame here is the first camera frame
+                PoseEstimate3D estimate_3d =
+                    pose_estimate_3d2d_opencv(last_orb_result, orb_res, good_matches,
+                                                cam_info.K, depth_image, pnp_method_enum);
+                pose = SimpleRoboticsCppUtils::cv_R_t_to_eigen_isometry3d(
+                    estimate_3d.R, estimate_3d.t);
+                // Step 8: further optimization using local BA
+                if (do_ba_two_frames) {
+                    std::vector<Eigen::Vector3d> optimized_points;
+                    bundle_adjustment_two_frames(estimate_3d, cam_info, pose,
+                                                optimized_points);
+                }
+                pose = optimized_poses.back() * pose;
+            }
+            // Step 9: prepare output
+            // std::cout << "T: " << std::endl << pose.matrix() << std::endl;
+            debug_print_3D_points(estimate, cam_info, pose);
+            optimized_poses.push_back(pose);
+            add_point_cloud(pose, image, depth_image, cam_info, point_cloud);
+        }
+        last_orb_result = std::move(orb_res);
+    }
+    // Step 10: global BA optimization (backend)
+    if (do_ba_backend) {}
+    visualize_slam_results(optimized_poses, poses_pub, points_pub, point_cloud);
+    ros::spin();
+
+    return 0;
 }

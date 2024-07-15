@@ -197,11 +197,6 @@ get_object_and_2d_points(std::vector<cv::Point3f> &object_frame_points,
     object_frame_points.emplace_back(p_canonical.x * depth,
                                      p_canonical.y * depth, depth);
     current_camera_pixels.emplace_back(res2.keypoints.at(match.trainIdx).pt);
-
-    // TODO
-    // std::cout<<"x: "<<p_canonical.x<<" y: "<< p_canonical.y << " depth:
-    // "<<depth << std::endl; std::cout<<"x: "<<p_canonical.x<<" y: "<<
-    // p_canonical.y << " depth: "<<depth << std::endl;
   }
 }
 inline PoseEstimate3D
