@@ -14,10 +14,10 @@ sudo docker run --name my_ros_container --rm -e DISPLAY=$DISPLAY \
     -v /etc/group:/etc/group:ro \
     -v /tmp/.X11-unix:/tmp/.X11-unix:ro \
     -v $HOME/.Xauthority:/root/.Xauthority \
-    -v /home/rjia/file_exchange_port/dream_cartographer_ws:/home/rjia/dream_cartographer_ws \
+    -v /home/${USER}/file_exchange_port/dream_cartographer_ws:/home/${USER}/dream_cartographer_ws \
     -v ~/.ssh:/root/.ssh \
-    -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_ros_utils:/home/rjia/dream_cartographer_ws/src/simple_robotics_ros_utils \
-    -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_cpp_utils:/home/rjia/dream_cartographer_ws/src/simple_robotics_cpp_utils \
+    -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_ros_utils:/home/${USER}/dream_cartographer_ws/src/simple_robotics_ros_utils \
+    -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_cpp_utils:/home/${USER}/dream_cartographer_ws/src/simple_robotics_cpp_utils \
     --user $(id -u):$(id -g) -e XAUTHORITY=/root/.Xauthority \
     --dns 8.8.8.8 --dns 8.8.4.4 -it --network="host" --privileged dream-rgbd-rico
     

@@ -40,8 +40,8 @@ void add_point_cloud(const Eigen::Isometry3d &pose, const cv::Mat &image,
                      const HandyCameraInfo &cam_info,
                      PointCloud::Ptr point_cloud) {
 
-  for (unsigned int v = 0; v < depth_image.rows; ++v) {
-    for (unsigned int u = 0; u < depth_image.rows; ++u) {
+  for (float v = 0; v < depth_image.rows; ++v) {
+    for (float u = 0; u < depth_image.rows; ++u) {
       // step 1: get depth
       double depth = depth_image.at<float>(v, u);
       if (std::isnan(depth) || depth < MIN_DEPTH || depth > MAX_DEPTH)
@@ -113,9 +113,9 @@ int main(int argc, char *argv[]) {
     SimpleRoboticsRosUtils::BagParser bp(nh, PACKAGE_NAME,
                                         "/data/rgbd_dataset_freiburg1_xyz.bag");
     constexpr auto RGB_TOPIC = "/camera/rgb/image_color";
-    bp.add_topic<sensor_msgs::Image>(RGB_TOPIC, false);
+    bp.add_topic<sensor_msgs::Image>(RGB_TOPIC);
     constexpr auto DEPTH_TOPIC = "/camera/depth/image";
-    bp.add_topic<sensor_msgs::Image>(DEPTH_TOPIC, false);
+    bp.add_topic<sensor_msgs::Image>(DEPTH_TOPIC);
     constexpr auto CAMERA_INFO_TOPIC = "/camera/rgb/camera_info";
     HandyCameraInfo cam_info = load_camera_info(bp, CAMERA_INFO_TOPIC);
     ORBFeatureDetectionResult last_orb_result;
@@ -154,10 +154,11 @@ int main(int argc, char *argv[]) {
                                                 optimized_points);
                 }
                 pose = optimized_poses.back() * pose;
+                // TODO
+                debug_print_3D_points(estimate_3d, cam_info, pose);
             }
             // Step 9: prepare output
             // std::cout << "T: " << std::endl << pose.matrix() << std::endl;
-            debug_print_3D_points(estimate, cam_info, pose);
             optimized_poses.push_back(pose);
             add_point_cloud(pose, image, depth_image, cam_info, point_cloud);
         }

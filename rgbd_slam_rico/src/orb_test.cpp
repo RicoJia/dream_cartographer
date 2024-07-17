@@ -16,9 +16,9 @@ int main(int argc, char **argv) {
   SimpleRoboticsRosUtils::BagParser bp(nh, PACKAGE_NAME,
                                        "/data/rgbd_dataset_freiburg1_xyz.bag");
   constexpr auto RGB_TOPIC = "/camera/rgb/image_color";
-  bp.add_topic<sensor_msgs::Image>(RGB_TOPIC, false);
+  bp.add_topic<sensor_msgs::Image>(RGB_TOPIC);
   constexpr auto CAMERA_INFO_TOPIC = "/camera/rgb/camera_info";
-  bp.add_topic<sensor_msgs::CameraInfo>(CAMERA_INFO_TOPIC, false);
+  bp.add_topic<sensor_msgs::CameraInfo>(CAMERA_INFO_TOPIC);
   HandyCameraInfo cam_info = load_camera_info(bp, CAMERA_INFO_TOPIC);
   std::cout << "cam info: " << cam_info.K << std::endl;
 
