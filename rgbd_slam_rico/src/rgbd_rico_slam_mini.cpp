@@ -33,18 +33,19 @@ void visualize_slam_results(
   }
   poses_publisher.publish(pose_array);
   point_cloud_publisher.publish(point_cloud);
+  std::cout<<"Visualizing number of points: "<<point_cloud->points.size()<<std::endl;
 }
 
 void add_point_cloud(const Eigen::Isometry3d &pose, const cv::Mat &image,
                      const cv::Mat &depth_image,
                      const HandyCameraInfo &cam_info,
-                     PointCloud::Ptr point_cloud) {
+                     PointCloud::Ptr point_cloud, const SLAMParams& slam_params) {
 
   for (float v = 0; v < depth_image.rows; ++v) {
     for (float u = 0; u < depth_image.rows; ++u) {
       // step 1: get depth
       double depth = depth_image.at<float>(v, u);
-      if (std::isnan(depth) || depth < MIN_DEPTH || depth > MAX_DEPTH)
+      if (std::isnan(depth) || depth < slam_params.min_depth || depth > slam_params.max_depth)
         continue; // bad depth
 
       // step 2: get canonical coords, and 3D point
@@ -96,12 +97,15 @@ int main(int argc, char *argv[]) {
     bool do_ba_two_frames;
     bool do_ba_backend;
     std::string pnp_method;
+    double min_depth, max_depth;
     nh.getParam("image_skip_batch_num", image_skip_batch_num);
     nh.getParam("image_num", image_num);
     nh.getParam("test_with_optimization", test_with_optimization);
     nh.getParam("pnp_method", pnp_method);
     nh.getParam("do_ba_two_frames", do_ba_two_frames);
     nh.getParam("do_ba_backend", do_ba_backend);
+    nh.getParam("min_depth", min_depth);
+    nh.getParam("max_depth", max_depth);
     int pnp_method_enum = read_pnp_method(pnp_method);
 
     // Step 2: bagparser, topics and camera info
@@ -113,12 +117,11 @@ int main(int argc, char *argv[]) {
     SimpleRoboticsRosUtils::BagParser bp(nh, PACKAGE_NAME,
                                         "/data/rgbd_dataset_freiburg1_xyz.bag");
     constexpr auto RGB_TOPIC = "/camera/rgb/image_color";
-    bp.add_topic<sensor_msgs::Image>(RGB_TOPIC);
     constexpr auto DEPTH_TOPIC = "/camera/depth/image";
-    bp.add_topic<sensor_msgs::Image>(DEPTH_TOPIC);
     constexpr auto CAMERA_INFO_TOPIC = "/camera/rgb/camera_info";
     HandyCameraInfo cam_info = load_camera_info(bp, CAMERA_INFO_TOPIC);
     ORBFeatureDetectionResult last_orb_result;
+    SLAMParams slam_params{max_depth, min_depth};
 
     // Step 3: initialize datastructure for optimization 
     PointCloud::Ptr point_cloud(new PointCloud);
@@ -144,7 +147,7 @@ int main(int argc, char *argv[]) {
                 // frame here is the first camera frame
                 PoseEstimate3D estimate_3d =
                     pose_estimate_3d2d_opencv(last_orb_result, orb_res, good_matches,
-                                                cam_info.K, depth_image, pnp_method_enum);
+                                                cam_info.K, depth_image, pnp_method_enum, slam_params);
                 pose = SimpleRoboticsCppUtils::cv_R_t_to_eigen_isometry3d(
                     estimate_3d.R, estimate_3d.t);
                 // Step 8: further optimization using local BA
@@ -154,16 +157,15 @@ int main(int argc, char *argv[]) {
                                                 optimized_points);
                 }
                 pose = optimized_poses.back() * pose;
-                // TODO
                 debug_print_3D_points(estimate_3d, cam_info, pose);
             }
             // Step 9: prepare output
-            // std::cout << "T: " << std::endl << pose.matrix() << std::endl;
             optimized_poses.push_back(pose);
-            add_point_cloud(pose, image, depth_image, cam_info, point_cloud);
+            add_point_cloud(pose, image, depth_image, cam_info, point_cloud, slam_params);
         }
         last_orb_result = std::move(orb_res);
     }
+
     // Step 10: global BA optimization (backend)
     if (do_ba_backend) {}
     visualize_slam_results(optimized_poses, poses_pub, points_pub, point_cloud);

@@ -1,6 +1,9 @@
 <launch>
     <rosparam file="$(find rgbd_slam_rico)/configs/rgbd_slam_rico_config.yaml" command="load"/>
-    <node pkg="rgbd_slam_rico" type="rgbd_rico_slam_mini" name="rgbd_rico_slam_mini" output="screen" />
+    <node pkg="rgbd_slam_rico" type="rgbd_rico_slam_mini" name="rgbd_rico_slam_mini" output="screen">
+        <!-- This doesn't do anything, paste below to the end of the node tag -->
+        <param name="launch-prefix" value="gdb -ex run --args" />
+    </node>
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rgbd_slam_rico)/rviz/rgbd_rico_slam.rviz" />
      <node pkg="tf2_ros" type="static_transform_publisher" name="static_transform_publisher" args="0 0 0 0 0 -1.5708 map camera"/> 
 </launch>

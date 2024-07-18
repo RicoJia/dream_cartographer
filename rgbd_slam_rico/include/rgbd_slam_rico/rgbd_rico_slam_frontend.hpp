@@ -15,8 +15,6 @@ constexpr double RANSAC_PROB_THRESHOLD = 0.99;
 // match could land. So if your match is this threshold away, we don't think
 // it's valid
 constexpr int RANSAC_MAX_DIST_TO_EPIPOLAR_LINE = 1.5;
-constexpr double MAX_DEPTH = 20.0;
-constexpr double MIN_DEPTH = 0.3;
 
 /************************************** Data Structures
  * **************************************/
@@ -32,6 +30,11 @@ struct PoseEstimate3D {
   cv::Mat t;
   std::vector<cv::Point3f> object_frame_points;
   std::vector<cv::Point2f> current_camera_pixels;
+};
+
+struct SLAMParams{
+    double max_depth = 20.0;
+    double min_depth = 0.3;
 };
 
 /************************************** Functions
@@ -186,11 +189,12 @@ get_object_and_2d_points(std::vector<cv::Point3f> &object_frame_points,
                          const ORBFeatureDetectionResult &res1,
                          const ORBFeatureDetectionResult &res2,
                          const std::vector<cv::DMatch> &feature_matches,
-                         const cv::Mat &K, const cv::Mat &depth1) {
+                         const cv::Mat &K, const cv::Mat &depth1,
+                         const SLAMParams& slam_params) {
   for (const cv::DMatch &match : feature_matches) {
     auto previous_pt = res1.keypoints.at(match.queryIdx).pt;
     double depth = depth1.at<float>(int(previous_pt.y), int(previous_pt.x));
-    if (std::isnan(depth) || depth < MIN_DEPTH || depth > MAX_DEPTH)
+    if (std::isnan(depth) || depth < slam_params.min_depth || depth > slam_params.max_depth)
       continue; // bad depth
     // to canonical form, then to depth
     auto p_canonical = SimpleRoboticsCppUtils::pixel2cam(previous_pt, K);
@@ -204,11 +208,11 @@ pose_estimate_3d2d_opencv(const ORBFeatureDetectionResult &res1,
                           const ORBFeatureDetectionResult &res2,
                           const std::vector<cv::DMatch> &feature_matches,
                           const cv::Mat &K, const cv::Mat &depth1,
-                          const int &pnp_method_enum) {
+                          const int &pnp_method_enum, const SLAMParams& slam_params) {
   std::vector<cv::Point3f> object_frame_points;
   std::vector<cv::Point2f> current_camera_pixels;
   get_object_and_2d_points(object_frame_points, current_camera_pixels, res1,
-                           res2, feature_matches, K, depth1);
+                           res2, feature_matches, K, depth1, slam_params);
 
   // for(auto p: object_frame_points) std::cout<<"3d p: "<<p<<std::endl;
   cv::Mat r, t;

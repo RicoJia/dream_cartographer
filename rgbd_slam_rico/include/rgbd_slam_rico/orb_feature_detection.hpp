@@ -57,6 +57,7 @@ inline HandyCameraInfo load_camera_info(SimpleRoboticsRosUtils::BagParser &bp,
 
   auto msg = bp.next<sensor_msgs::CameraInfo>(camera_info_topic);
   HandyCameraInfo cam_info;
+  // 64FC1 is 64 double precision, 1 channel
   cam_info.K = cv::Mat(3, 3, CV_64FC1, msg->K.data());
   return cam_info;
 }

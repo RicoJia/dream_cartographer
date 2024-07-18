@@ -51,6 +51,9 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y \
+    gdb
+
 ENV CCACHE_DIR=/ccache
 ENV CC="ccache gcc"
 ENV CXX="ccache g++"

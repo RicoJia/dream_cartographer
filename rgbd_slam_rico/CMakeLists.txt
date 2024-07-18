@@ -4,6 +4,9 @@ add_compile_options(-std=c++2a)
 # for vscode parameter clicking. Then
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# # TODO: need to set to release mode
+# set(CMAKE_BUILD_TYPE Debug)
+
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
