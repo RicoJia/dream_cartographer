@@ -36,11 +36,11 @@ void visualize_slam_results(
   std::cout<<"Visualizing number of points: "<<point_cloud->points.size()<<std::endl;
 }
 
-void add_point_cloud(const Eigen::Isometry3d &pose, const cv::Mat &image,
+void add_point_cloud(const Eigen::Isometry3d &world_to_cam, const cv::Mat &image,
                      const cv::Mat &depth_image,
                      const HandyCameraInfo &cam_info,
                      PointCloud::Ptr point_cloud, const SLAMParams& slam_params) {
-
+  auto cam_to_world = world_to_cam.inverse();
   for (float v = 0; v < depth_image.rows; ++v) {
     for (float u = 0; u < depth_image.rows; ++u) {
       // step 1: get depth
@@ -49,12 +49,12 @@ void add_point_cloud(const Eigen::Isometry3d &pose, const cv::Mat &image,
         continue; // bad depth
 
       // step 2: get canonical coords, and 3D point
-      // TODO: u,v here
       auto p_canonical = SimpleRoboticsCppUtils::pixel2cam({u, v}, cam_info.K);
       Eigen::Vector3d point{p_canonical.x * depth, p_canonical.y * depth,
                             depth};
-      auto world_point = pose * point;
-      //  Is it bgr or rgb? TODO
+      // SolvePnP gives world -> camera world_to_cam. TODO: so we need to inverse this?
+      auto world_point = cam_to_world * point;
+      // Again, welcome to the BGR world
       cv::Vec3b bgr = image.at<cv::Vec3b>(v, u);
       pcl::PointXYZRGB pcl_point;
       pcl_point.x = world_point[0];
@@ -71,19 +71,26 @@ void add_point_cloud(const Eigen::Isometry3d &pose, const cv::Mat &image,
   point_cloud->is_dense = false;
 }
 
+// Need frame1 2D matches points, frame 2 2D matches, to canonical, then to 3D, then to the same frame
 void debug_print_3D_points(const PoseEstimate3D &estimate, const HandyCameraInfo &cam_info,
-    Eigen::Isometry3d &pose){
+    Eigen::Isometry3d &cam1_2_cam2, const cv::Mat &depth2){
+
     // Transform object frame points (frame1) to frame 2
     std::vector<Eigen::Vector3d> frame1_points, frame2_points;
-    frame1_points.resize(estimate.object_frame_points.size());
-    frame2_points.resize(estimate.current_camera_pixels.size());
-    for (const auto& point : estimate.object_frame_points){
-        Eigen::Vector3d p(point.x, point.y, point.z);
-        auto transformed_point = pose * p;
-        frame1_points.emplace_back(transformed_point);
-    }
+
     // Do these points share the same order?
     // estimate.current_camera_pixels
+    for (unsigned int i = 0; i < estimate.object_frame_points.size(); ++i){
+        const auto& point1 = estimate.object_frame_points.at(i);
+        Eigen::Vector3d p1(point1.x, point1.y, point1.z);
+        auto p1_trans = cam1_2_cam2 * p1;
+        
+        const auto& pixel2 = estimate.current_camera_pixels.at(i);
+        auto p2_canonical = SimpleRoboticsCppUtils::pixel2cam(pixel2, cam_info.K);
+        double depth = depth2.at<float>(int(pixel2.y), int(pixel2.x));
+        Eigen::Vector3d p2(p2_canonical.x * depth, p2_canonical.y * depth, depth);
+        std::cout<<"p1: "<<p1_trans<<"p2: "<<p2<<std::endl;
+    }
 
 }
 
@@ -120,14 +127,15 @@ int main(int argc, char *argv[]) {
     constexpr auto DEPTH_TOPIC = "/camera/depth/image";
     constexpr auto CAMERA_INFO_TOPIC = "/camera/rgb/camera_info";
     HandyCameraInfo cam_info = load_camera_info(bp, CAMERA_INFO_TOPIC);
-    ORBFeatureDetectionResult last_orb_result;
     SLAMParams slam_params{max_depth, min_depth};
 
-    // Step 3: initialize datastructure for optimization 
+    // Step 3: initialize data structures for optimization 
     PointCloud::Ptr point_cloud(new PointCloud);
     point_cloud->header.frame_id = "camera";
     point_cloud->height = point_cloud->width = 1;
     std::vector<Eigen::Isometry3d> optimized_poses{Eigen::Isometry3d::Identity()};
+    ORBFeatureDetectionResult last_orb_result;
+    PnPData last_pnp_data;
 
     for (unsigned int i = 0; i < image_num * image_skip_batch_num; i++) {
         // Step 4: load images
@@ -146,8 +154,9 @@ int main(int argc, char *argv[]) {
                 // Step 7: find 3D "world frame coordinates" through pnp. For simplicity, the world
                 // frame here is the first camera frame
                 PoseEstimate3D estimate_3d =
+                    // TODO: should we load the "last depth image"? why?
                     pose_estimate_3d2d_opencv(last_orb_result, orb_res, good_matches,
-                                                cam_info.K, depth_image, pnp_method_enum, slam_params);
+                                                cam_info.K, last_pnp_data.depth_image, pnp_method_enum, slam_params);
                 pose = SimpleRoboticsCppUtils::cv_R_t_to_eigen_isometry3d(
                     estimate_3d.R, estimate_3d.t);
                 // Step 8: further optimization using local BA
@@ -157,13 +166,14 @@ int main(int argc, char *argv[]) {
                                                 optimized_points);
                 }
                 pose = optimized_poses.back() * pose;
-                debug_print_3D_points(estimate_3d, cam_info, pose);
+                // debug_print_3D_points(estimate_3d, cam_info, pose);      // TODO: need to fix the above last depth image first
             }
             // Step 9: prepare output
             optimized_poses.push_back(pose);
             add_point_cloud(pose, image, depth_image, cam_info, point_cloud, slam_params);
         }
         last_orb_result = std::move(orb_res);
+        last_pnp_data = PnPData{std::move(image), std::move(depth_image)};
     }
 
     // Step 10: global BA optimization (backend)

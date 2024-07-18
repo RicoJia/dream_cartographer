@@ -37,6 +37,11 @@ struct SLAMParams{
     double min_depth = 0.3;
 };
 
+struct PnPData{
+    cv::Mat image;
+    cv::Mat depth_image;
+};
+
 /************************************** Functions
  * **************************************/
 

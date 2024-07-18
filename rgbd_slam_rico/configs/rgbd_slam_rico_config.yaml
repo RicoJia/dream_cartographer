@@ -1,9 +1,9 @@
 image_skip_batch_num: 25
-image_num: 2
-test_with_optimization: false
+image_num: 6
+test_with_optimization: true
 do_ba_two_frames: true
-do_ba_backend: true
+do_ba_backend: false #not effective
 pnp_method: "epnp"
 # pnp_method: "dls"
-min_depth: 0.3
-max_depth: 1.0
+min_depth: 0.2
+max_depth: 10.0
