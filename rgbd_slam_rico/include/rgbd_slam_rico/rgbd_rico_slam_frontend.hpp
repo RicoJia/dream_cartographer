@@ -27,6 +27,7 @@ struct SLAMParams {
   bool verbose = false;
   bool do_ba_backend = true;
   bool pause_after_optimization = false;
+  int initial_image_skip_num = 0;
 };
 
 struct FrontEndData {
@@ -87,8 +88,8 @@ inline void filter_point_matches_with_valid_depths(
  * **************************************/
 
 /**
- * @brief Get data ready for Motion Estimation using 3D-2D correspondence. Important:
- * We assume ALL 3D and 2D POINTS have been depth-filtered
+ * @brief Get data ready for Motion Estimation using 3D-2D correspondence.
+ * Important: We assume ALL 3D and 2D POINTS have been depth-filtered
  *
  * @param object_frame_points : output 3D matched points in the object (world)
  * frame

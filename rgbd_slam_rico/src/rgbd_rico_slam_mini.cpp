@@ -53,10 +53,6 @@ void add_point_cloud(const Eigen::Isometry3d &world_to_cam,
     for (float u = 0; u < depth_image.rows; ++u) {
       // step 1: get depth
       double depth = depth_image.at<float>(v, u);
-      if (std::isnan(depth) || depth < slam_params.min_depth ||
-          depth > slam_params.max_depth)
-        continue; // bad depth
-
       // step 2: get canonical coords, and 3D point
       auto p_canonical = SimpleRoboticsCppUtils::pixel2cam({u, v}, cam_info.K);
       Eigen::Vector3d point{p_canonical.x * depth, p_canonical.y * depth,
@@ -113,7 +109,6 @@ void add_point_cloud(const Eigen::Isometry3d &world_to_cam,
 //         depth); std::cout<<"p1: "<<p1_trans.format(eigen_1_line_fmt)<<"p2:
 //         "<<p2.format(eigen_1_line_fmt)<<std::endl;
 //     }
-
 // }
 
 int main(int argc, char *argv[]) {
@@ -135,6 +130,7 @@ int main(int argc, char *argv[]) {
   nh.getParam("max_depth", slam_params.max_depth);
   nh.getParam("verbose", slam_params.verbose);
   nh.getParam("pause_after_optimization", slam_params.pause_after_optimization);
+  nh.getParam("initial_image_skip_num", slam_params.initial_image_skip_num);
 
   int pnp_method_enum = read_pnp_method(pnp_method);
 
@@ -159,7 +155,11 @@ int main(int argc, char *argv[]) {
   ORBFeatureDetectionResult last_orb_result;
   FrontEndData front_end_data;
 
-  for (unsigned int i = 0; i < image_num * image_skip_batch_num; i++) {
+  bp.fast_forward(RGB_TOPIC, slam_params.initial_image_skip_num);
+  bp.fast_forward(DEPTH_TOPIC, slam_params.initial_image_skip_num);
+
+  for (unsigned int i = slam_params.initial_image_skip_num;
+       i < image_num * image_skip_batch_num; i++) {
     if (!ros::ok())
       break;
     // Step 4: load images

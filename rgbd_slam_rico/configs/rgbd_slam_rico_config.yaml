@@ -7,5 +7,8 @@ pnp_method: "epnp"
 # pnp_method: "dls"
 min_depth: 0.2
 max_depth: 20.0
+
+# Debugging Params
 verbose: false
 pause_after_optimization: true
+initial_image_skip_num: 119
