@@ -1,5 +1,5 @@
 #include "rgbd_slam_rico/orb_feature_detection.hpp"
-#include "rgbd_slam_rico/rgbd_rico_slam_frontend.hpp"
+#include "rgbd_slam_rico/rgbd_rico_slam_2d2d.hpp"
 #include "simple_robotics_cpp_utils/cv_utils.hpp"
 #include <cv_bridge/cv_bridge.h>
 #include <memory>
