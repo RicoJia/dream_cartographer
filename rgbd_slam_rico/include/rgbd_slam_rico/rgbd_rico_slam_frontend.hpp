@@ -87,7 +87,8 @@ inline void filter_point_matches_with_valid_depths(
  * **************************************/
 
 /**
- * @brief Get data ready for Motion Estimation using 3D-2D correspondence
+ * @brief Get data ready for Motion Estimation using 3D-2D correspondence. Important:
+ * We assume ALL 3D and 2D POINTS have been depth-filtered
  *
  * @param object_frame_points : output 3D matched points in the object (world)
  * frame
@@ -110,9 +111,6 @@ get_object_and_2d_points(std::vector<cv::Point3f> &object_frame_points,
   for (const cv::DMatch &match : feature_matches) {
     auto previous_pt = res1.keypoints.at(match.queryIdx).pt;
     double depth = depth1.at<float>(int(previous_pt.y), int(previous_pt.x));
-    if (std::isnan(depth) || depth < slam_params.min_depth ||
-        depth > slam_params.max_depth)
-      continue; // bad depth
     // to canonical form, then to depth
     auto p_canonical = SimpleRoboticsCppUtils::pixel2cam(previous_pt, K);
     object_frame_points.emplace_back(p_canonical.x * depth,
