@@ -1,8 +1,8 @@
 initial_image_skip_num: 40 #119
 image_skip_batch_num: 4
-image_num: 40
+image_num: 60
 test_with_optimization: true
-pnp_method: "epnp"
+pnp_method: "iterative"
 downsample_point_cloud: true
 # pnp_method: "p3p"
 use_ransac_for_pnp: true
@@ -17,4 +17,4 @@ max_interframe_translation_thre: 1.0
 # Debugging Params
 verbose: false
 pause_after_optimization: false
-voxel_size: 0.01
+voxel_size: 0.013

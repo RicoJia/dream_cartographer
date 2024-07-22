@@ -1,6 +1,7 @@
 #pragma once
 #include "rgbd_slam_rico/orb_feature_detection.hpp"
 #include "simple_robotics_cpp_utils/cv_utils.hpp"
+#include "simple_robotics_cpp_utils/io_utils.hpp"
 #include <iostream>
 #include <numeric>
 #include <opencv2/calib3d.hpp>
@@ -26,7 +27,7 @@ struct SLAMParams {
   bool use_ransac_for_pnp = false;
   int min_matches_num =
       6; //> DLT algorithm needs at least 6 points for pose estimation from
-         //3D-2D point correspondences. (expected: 'count >= 6'), where
+         // 3D-2D point correspondences. (expected: 'count >= 6'), where
   double min_interframe_rotation_thre = 0.05;
   double min_interframe_translation_thre = 0.05;
   double max_interframe_rotation_thre = 1.57;
@@ -76,6 +77,8 @@ inline int read_pnp_method(const std::string &method) {
     return cv::SOLVEPNP_IPPE;
   else if (method == "ippe_square") // Need 4 points only
     return cv::SOLVEPNP_IPPE_SQUARE;
+  else if (method == "iterative") // Need 4 points only
+    return cv::SOLVEPNP_ITERATIVE;
   else
     throw std::runtime_error("Please select a valid pnp method");
 }
@@ -200,9 +203,25 @@ front_end(const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
     std::cout << "good match size: " << good_matches.size()
               << ", slam_params.min_matches_numL "
               << slam_params.min_matches_num << std::endl;
+    try {
+      // There's a bug where solvePnPRansac could have less than 6 points for
+      // the DLT solver it uses. Related:
+      // https://github.com/opencv/opencv/pull/19253#discussion_r570670642
+      cv::solvePnPRansac(object_frame_points, current_camera_pixels, K,
+                         cv::Mat(), r, t, false, slam_params.pnp_method_enum);
+    } catch (const cv::Exception &e) {
+      std::cerr << SimpleRoboticsCppUtils::to_color_msg(
+                       SimpleRoboticsCppUtils::ANSIStrings::YELLOW, e.what(),
+                       true)
+                << std::endl
+                << SimpleRoboticsCppUtils::to_color_msg(
+                       SimpleRoboticsCppUtils::ANSIStrings::BLUE,
+                       "Using Regular SolvePnP", true)
+                << std::endl;
+      cv::solvePnP(object_frame_points, current_camera_pixels, K, cv::Mat(), r,
+                   t, false, cv::SOLVEPNP_DLS);
+    }
 
-    cv::solvePnPRansac(object_frame_points, current_camera_pixels, K, cv::Mat(),
-                       r, t, false, slam_params.pnp_method_enum);
   } else {
     cv::solvePnP(object_frame_points, current_camera_pixels, K, cv::Mat(), r, t,
                  false, slam_params.pnp_method_enum);
