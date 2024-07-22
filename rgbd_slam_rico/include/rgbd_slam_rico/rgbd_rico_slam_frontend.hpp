@@ -26,6 +26,11 @@ struct SLAMParams {
   bool use_ransac_for_pnp = false;
   bool do_ba_two_frames = true;
   int min_matches_num = 5;
+    double min_interframe_rotation_thre = 0.05;
+    double min_interframe_translation_thre = 0.05;
+    double max_interframe_rotation_thre = 1.57;
+    double max_interframe_translation_thre = 1.0;
+
   // Debugging params
   bool verbose = false;
   bool do_ba_backend = true;
@@ -34,7 +39,7 @@ struct SLAMParams {
   int image_skip_batch_num = 0;
   int image_num = 1;
   bool test_with_optimization = true;
-  std::string pnp_method = "epnp";
+  int pnp_method_enum = 0;
 };
 
 struct FrontEndData {
@@ -156,7 +161,7 @@ get_object_and_2d_points(std::vector<cv::Point3f> &object_frame_points,
  * yielded. You will have to rely on global optimization, which is a hit or miss
  * TODO
  */
-inline std::optional<Eigen::Isometry3d> estimate_and_add_to_graph(
+inline std::optional<Eigen::Isometry3d> front_end(
     const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
     const KeyFrameData &previous_keyframe, KeyFrameData &current_keyframe) {
   auto orb_res_optional = get_valid_orb_features(slam_params, current_keyframe);
@@ -184,20 +189,33 @@ inline std::optional<Eigen::Isometry3d> estimate_and_add_to_graph(
                            good_matches, K, depth1, slam_params);
 
   cv::Mat r, t;
-  // if (slam_params.use_ransac_for_pnp) {
-  //     cv::solvePnPRansac(front_end_data.object_frame_points,
-  //                     front_end_data.current_camera_pixels, K, cv::Mat(), r,
-  //                     t, false, pnp_method_enum);
-  // } else {
-  //     cv::solvePnP(front_end_data.object_frame_points,
-  //                 front_end_data.current_camera_pixels, K, cv::Mat(), r, t,
-  //                 false, pnp_method_enum);
-  // }
+  if (slam_params.use_ransac_for_pnp) {
+      cv::solvePnPRansac(object_frame_points,
+                      current_camera_pixels, K, cv::Mat(), r,
+                      t, false, slam_params.pnp_method_enum);
+  } else {
+      cv::solvePnP(object_frame_points,
+                  current_camera_pixels, K, cv::Mat(), r, t,
+                  false, slam_params.pnp_method_enum);
+  }
 
-  // // Step 2: checks:
+  // Step 2: checks:
+  const double r_norm = cv::norm(r);
+  const double t_norm = cv::norm(t);
+  if (r_norm < slam_params.min_interframe_rotation_thre && 
+    t_norm < slam_params.min_interframe_translation_thre){
+        std::cerr<<"r and t norm are smaller than motion thresholds. Skip."<<std::endl;
+        return std::nullopt;
+    }
+
+  if (r_norm > slam_params.max_interframe_rotation_thre ||
+    t_norm > slam_params.max_interframe_translation_thre){
+        std::cerr<<"r and/or t norm is greater than motion thresholds. Skip."<<std::endl;
+        return std::nullopt;
+    }
 
   cv::Mat R;
-  // cv::Rodrigues(r, R);
+  cv::Rodrigues(r, R);
   Eigen::Isometry3d frame1_to_frame2 =
       SimpleRoboticsCppUtils::cv_R_t_to_eigen_isometry3d(R, t);
   return frame1_to_frame2;

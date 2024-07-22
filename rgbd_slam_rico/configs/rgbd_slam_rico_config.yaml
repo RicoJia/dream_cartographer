@@ -1,5 +1,6 @@
 image_skip_batch_num: 6
-image_num: 40
+initial_image_skip_num: 12 #119
+image_num: 10
 test_with_optimization: true
 pnp_method: "epnp"
 # pnp_method: "p3p"
@@ -8,8 +9,11 @@ do_ba_two_frames: false
 do_ba_backend: false #not effective
 min_depth: 0.2
 max_depth: 10.0
+min_interframe_rotation_thre: 0.05 #2.84 deg
+min_interframe_translation_thre: 0.05
+max_interframe_rotation_thre: 1.57 #90 deg
+max_interframe_translation_thre: 1.0
 
 # Debugging Params
 verbose: false
 pause_after_optimization: false
-initial_image_skip_num: 0 #119
