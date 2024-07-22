@@ -19,12 +19,4 @@
 
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 
-namespace RgbdSlamRico {
-// inline void bundle_adjustment(
-//     const std::vector<PoseEstimate3D>& estimates,
-//     const HandyCameraInfo& cam_info,
-//     std::vector<Eigen::Isometry3d>& optimized_poses,
-//     std::vector<Eigen::Vector3d>& optimized_points
-// ){
-// }
-} // namespace RgbdSlamRico
+namespace RgbdSlamRico {} // namespace RgbdSlamRico

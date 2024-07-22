@@ -25,10 +25,16 @@ struct SLAMParams {
   double min_depth = 0.3;
   bool use_ransac_for_pnp = false;
   bool do_ba_two_frames = true;
+  int min_matches_num = 5;
+  // Debugging params
   bool verbose = false;
   bool do_ba_backend = true;
   bool pause_after_optimization = false;
   int initial_image_skip_num = 0;
+  int image_skip_batch_num = 0;
+  int image_num = 1;
+  bool test_with_optimization = true;
+  std::string pnp_method = "epnp";
 };
 
 struct FrontEndData {
@@ -38,9 +44,16 @@ struct FrontEndData {
   std::vector<cv::Point2f> current_camera_pixels;
 };
 
-/************************************** Functions - 2D 2D
- * **************************************/
+struct KeyFrameData {
+  cv::Mat image;
+  cv::Mat depth_image;
+  Eigen::Isometry3d pose;
+  ORBFeatureDetectionResult orb_res;
+};
 
+///////////////////////////////////////////////////////////////////////////
+// Version 2.0
+///////////////////////////////////////////////////////////////////////////
 // RANSAC can be only used with p3p, ap3p, and epnp
 inline int read_pnp_method(const std::string &method) {
   if (method == "epnp")
@@ -57,6 +70,17 @@ inline int read_pnp_method(const std::string &method) {
     return cv::SOLVEPNP_IPPE_SQUARE;
   else
     throw std::runtime_error("Please select a valid pnp method");
+}
+
+std::optional<ORBFeatureDetectionResult>
+get_valid_orb_features(const SLAMParams &slam_params,
+                       const KeyFrameData &current_keyframe) {
+  auto orb_res = detect_orb_features(current_keyframe.image);
+  if (orb_res.keypoints.size() < slam_params.min_matches_num) {
+    std::cerr << "Not enough keypoints" << std::endl;
+    return std::nullopt;
+  }
+  return orb_res;
 }
 
 /**
@@ -92,9 +116,6 @@ inline void filter_point_matches_with_valid_depths(
   matches.erase(new_end, matches.end());
 }
 
-/************************************** Functions - 3D 2D
- * **************************************/
-
 /**
  * @brief Get data ready for Motion Estimation using 3D-2D correspondence.
  * Important: We assume ALL 3D and 2D POINTS have been depth-filtered
@@ -127,152 +148,58 @@ get_object_and_2d_points(std::vector<cv::Point3f> &object_frame_points,
     current_camera_pixels.emplace_back(res2.keypoints.at(match.trainIdx).pt);
   }
 }
-
-inline void _add_intrinsics(const HandyCameraInfo &cam_info,
-                            g2o::SparseOptimizer &optimizer) {
-  auto K_eigen =
-      SimpleRoboticsCppUtils::cv_R_to_eigen_matrixXd<Eigen::Matrix3d>(
-          cam_info.K);
-  // TODO: what does below mean?
-  g2o::CameraParameters *params = new g2o::CameraParameters(
-      K_eigen(0, 0), Eigen::Vector2d(K_eigen(0, 2), K_eigen(1, 2)), 0);
-  params->setId(0);
-  optimizer.addParameter(params);
-}
-// // adding one camera pose as a vertex
-inline void
-_add_camera_pose(const Eigen::Isometry3d &frame1_to_frame2,
-                 const unsigned int &vertex_id, g2o::SparseOptimizer &optimizer,
-                 std::vector<g2o::VertexSE3Expmap *> &camera_pose_vertices) {
-  g2o::VertexSE3Expmap *v_se3 = new g2o::VertexSE3Expmap();
-  camera_pose_vertices.push_back(v_se3);
-  v_se3->setId(vertex_id);
-  // This could be more efficient
-  g2o::SE3Quat se3quat(frame1_to_frame2.rotation(),
-                       frame1_to_frame2.translation());
-  v_se3->setEstimate(se3quat);
-  optimizer.addVertex(v_se3);
-}
-
-// adding 3D points as vertices, 2D points as projection points
-inline void
-_add_3D_2D_points(const FrontEndData &front_end_data, unsigned int &vertex_id,
-                  g2o::SparseOptimizer &optimizer,
-                  std::vector<g2o::VertexSBAPointXYZ *> &point3d_vertices) {
-  // vertex_id is the index of the camera pose.
-  unsigned int camera_pose_vertex_id = vertex_id;
-  for (unsigned int i = 0; i < front_end_data.object_frame_points.size(); i++) {
-    const cv::Point3f &p = front_end_data.object_frame_points.at(i);
-    const cv::Point2f &p_2d = front_end_data.current_camera_pixels.at(i);
-
-    ++vertex_id;
-    // adding 3D points as vertices
-    g2o::VertexSBAPointXYZ *v_p = new g2o::VertexSBAPointXYZ();
-    point3d_vertices.push_back(v_p);
-    v_p->setId(vertex_id);
-    v_p->setEstimate(Eigen::Vector3d(p.x, p.y, p.z));
-    v_p->setMarginalized(true);
-    optimizer.addVertex(v_p);
-
-    /*
-    0th vertex (from) is the 3D point, 1th vertex (to) is the camera pose
-    */
-    g2o::EdgeProjectXYZ2UV *edge = new g2o::EdgeProjectXYZ2UV();
-    edge->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(
-                           optimizer.vertex(vertex_id)));
-    edge->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(
-                           optimizer.vertex(camera_pose_vertex_id)));
-    edge->setMeasurement(Eigen::Vector2d{p_2d.x, p_2d.y});
-    edge->setInformation(Eigen::Matrix2d::Identity());
-    edge->setParameterId(0, 0);
-    optimizer.addEdge(edge);
+/**
+ * @brief : Calculate a pose estimate using front end solve pnp,
+ * Then perform checks to determine if this frame is a key frame,
+ * Caveats:
+ *  - If two frames do not have enough point matches, then no frames are
+ * yielded. You will have to rely on global optimization, which is a hit or miss
+ * TODO
+ */
+inline std::optional<Eigen::Isometry3d> estimate_and_add_to_graph(
+    const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
+    const KeyFrameData &previous_keyframe, KeyFrameData &current_keyframe) {
+  auto orb_res_optional = get_valid_orb_features(slam_params, current_keyframe);
+  if (!orb_res_optional.has_value())
+    return std::nullopt;
+  current_keyframe.orb_res = orb_res_optional.value();
+  // Step 6: Match features
+  auto good_matches = find_matches_and_draw_them(
+      previous_keyframe.orb_res, current_keyframe.orb_res, false);
+  filter_point_matches_with_valid_depths(
+      good_matches, previous_keyframe.depth_image, current_keyframe.depth_image,
+      previous_keyframe.orb_res, current_keyframe.orb_res, slam_params);
+  if (good_matches.size() < slam_params.min_matches_num) {
+    std::cerr << "Not enough feature matches" << std::endl;
+    return std::nullopt;
   }
-  // for the next guy
-  ++vertex_id;
-}
-
-inline void bundle_adjustment_two_frames(
-    const FrontEndData &front_end_data, const HandyCameraInfo &cam_info,
-    Eigen::Isometry3d &frame1_to_frame2,
-    std::vector<Eigen::Vector3d> &optimized_points, const bool &verbose) {
-  // TODO: other optimizers other than the sparse? What does it do?
-  // TODO: what is BlockSolver?
-  g2o::SparseOptimizer optimizer;
-  optimizer.setAlgorithm(new g2o::OptimizationAlgorithmLevenberg(
-      g2o::make_unique<g2o::BlockSolverX>(
-          g2o::make_unique<
-              g2o::LinearSolverDense<g2o::BlockSolverX::PoseMatrixType>>())));
-
-  _add_intrinsics(cam_info, optimizer);
-
-  std::vector<g2o::VertexSE3Expmap *> camera_pose_vertices;
-  std::vector<g2o::VertexSBAPointXYZ *> point3d_vertices;
-
-  unsigned int vertex_id = 0;
-  // Step 2: adding camera poses as vertices.
-  _add_camera_pose(frame1_to_frame2, vertex_id, optimizer,
-                   camera_pose_vertices);
-  _add_3D_2D_points(front_end_data, vertex_id, optimizer, point3d_vertices);
-
-  // TODO What does optimizer.optimize(10);mean?
-  optimizer.setVerbose(verbose);
-  optimizer.initializeOptimization();
-  optimizer.optimize(10);
-
-  // Not pushing all points here because this is enough points!
-  frame1_to_frame2 = Eigen::Isometry3d(camera_pose_vertices.at(0)->estimate());
-  for (const auto &point : point3d_vertices) {
-    optimized_points.push_back(point->estimate());
-  }
-}
-
-Eigen::Isometry3d front_end(const ORBFeatureDetectionResult &res1,
-                            const ORBFeatureDetectionResult &res2,
-                            const std::vector<cv::DMatch> &feature_matches,
-                            FrontEndData &front_end_data,
-                            const int &pnp_method_enum,
-                            const SLAMParams &slam_params,
-                            const HandyCameraInfo &cam_info) {
-  // Step 1 - PnP
-  const cv::Mat &depth1 = front_end_data.depth_image;
+  // Step 1 - PnP front end
+  const cv::Mat &depth1 = previous_keyframe.depth_image;
   const cv::Mat &K = cam_info.K;
-  get_object_and_2d_points(front_end_data.object_frame_points,
-                           front_end_data.current_camera_pixels, res1, res2,
-                           feature_matches, K, depth1, slam_params);
 
-  /**
-   cv::SOLVEPNP_DLS: "A Direct Least-Squares (DLS) Method for PnP"
-  cv::SOLVEPNP_P3P : "Complete Solution Classification for the
-  Perspective-Three-Point Problem". It needs 4 points exactly cv::SOLVEPNP_EPNP
-  : "Complete Solution Classification for the Perspective-Three-Point Problem".
-  It needs 4 points exactly cv::Mat() is distCoeffs
-  */
-  // TODO: to add our custom patches.
+  std::vector<cv::Point3f> object_frame_points;
+  std::vector<cv::Point2f> current_camera_pixels;
+  get_object_and_2d_points(object_frame_points, current_camera_pixels,
+                           previous_keyframe.orb_res, current_keyframe.orb_res,
+                           good_matches, K, depth1, slam_params);
+
   cv::Mat r, t;
-  if (slam_params.use_ransac_for_pnp) {
-    cv::solvePnPRansac(front_end_data.object_frame_points,
-                       front_end_data.current_camera_pixels, K, cv::Mat(), r, t,
-                       false, pnp_method_enum);
-  } else {
-    cv::solvePnP(front_end_data.object_frame_points,
-                 front_end_data.current_camera_pixels, K, cv::Mat(), r, t,
-                 false, pnp_method_enum);
-  }
+  // if (slam_params.use_ransac_for_pnp) {
+  //     cv::solvePnPRansac(front_end_data.object_frame_points,
+  //                     front_end_data.current_camera_pixels, K, cv::Mat(), r,
+  //                     t, false, pnp_method_enum);
+  // } else {
+  //     cv::solvePnP(front_end_data.object_frame_points,
+  //                 front_end_data.current_camera_pixels, K, cv::Mat(), r, t,
+  //                 false, pnp_method_enum);
+  // }
+
+  // // Step 2: checks:
+
   cv::Mat R;
-  cv::Rodrigues(r, R);
+  // cv::Rodrigues(r, R);
   Eigen::Isometry3d frame1_to_frame2 =
       SimpleRoboticsCppUtils::cv_R_t_to_eigen_isometry3d(R, t);
-
-  // Step 2 - Local Bundle Adjustment
-
-  // find 3D "world frame coordinates" through pnp. For simplicity, the world
-  // frame here is the first camera frame
-  if (slam_params.do_ba_two_frames) {
-    std::vector<Eigen::Vector3d> optimized_points;
-    bundle_adjustment_two_frames(front_end_data, cam_info, frame1_to_frame2,
-                                 optimized_points, slam_params.verbose);
-  }
   return frame1_to_frame2;
 }
-
 } // namespace RgbdSlamRico

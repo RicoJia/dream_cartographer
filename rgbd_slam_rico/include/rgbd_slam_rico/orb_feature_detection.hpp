@@ -63,15 +63,13 @@ inline HandyCameraInfo load_camera_info(SimpleRoboticsRosUtils::BagParser &bp,
   return cam_info;
 }
 
-inline ORBFeatureDetectionResult detect_orb_features(cv::Mat &image) {
+inline ORBFeatureDetectionResult detect_orb_features(const cv::Mat &image) {
   cv::Ptr<cv::ORB> orb = cv::ORB::create();
   ORBFeatureDetectionResult res;
   res.image = image;
 
   orb->detectAndCompute(image, cv::noArray(), res.keypoints, res.descriptor);
 
-  cv::drawKeypoints(image, res.keypoints, res.image_with_keypoints,
-                    cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
   return res;
 }
 
@@ -95,6 +93,10 @@ find_matches_and_draw_them(const ORBFeatureDetectionResult &res1,
   }
   if (draw_matches) {
     cv::Mat image_with_matches;
+    cv::drawKeypoints(res1.image, res1.keypoints, res1.image_with_keypoints,
+                      cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
+    cv::drawKeypoints(res2.image, res2.keypoints, res2.image_with_keypoints,
+                      cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
     drawMatches(res1.image, res1.keypoints, res2.image, res2.keypoints,
                 good_matches, image_with_matches, cv::Scalar::all(-1),
                 cv::Scalar::all(-1), std::vector<char>(),
