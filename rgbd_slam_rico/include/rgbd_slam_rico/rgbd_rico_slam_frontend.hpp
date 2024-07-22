@@ -23,6 +23,7 @@ namespace RgbdSlamRico {
 struct SLAMParams {
   double max_depth = 20.0;
   double min_depth = 0.3;
+  bool use_ransac_for_pnp = false;
   bool do_ba_two_frames = true;
   bool verbose = false;
   bool do_ba_backend = true;
@@ -40,15 +41,22 @@ struct FrontEndData {
 /************************************** Functions - 2D 2D
  * **************************************/
 
+// RANSAC can be only used with p3p, ap3p, and epnp
 inline int read_pnp_method(const std::string &method) {
   if (method == "epnp")
     return cv::SOLVEPNP_EPNP;
-  else if (method == "p3p")
+  else if (method == "p3p") // Need 4 points only
     return cv::SOLVEPNP_P3P;
+  else if (method == "ap3p") // Need 4 points only
+    return cv::SOLVEPNP_AP3P;
   else if (method == "dls")
     return cv::SOLVEPNP_DLS;
+  else if (method == "ippe") // Need 4 points only
+    return cv::SOLVEPNP_IPPE;
+  else if (method == "ippe_square") // Need 4 points only
+    return cv::SOLVEPNP_IPPE_SQUARE;
   else
-    return cv::SOLVEPNP_EPNP;
+    throw std::runtime_error("Please select a valid pnp method");
 }
 
 /**
@@ -241,9 +249,15 @@ Eigen::Isometry3d front_end(const ORBFeatureDetectionResult &res1,
   */
   // TODO: to add our custom patches.
   cv::Mat r, t;
-  cv::solvePnP(front_end_data.object_frame_points,
-               front_end_data.current_camera_pixels, K, cv::Mat(), r, t, false,
-               pnp_method_enum);
+  if (slam_params.use_ransac_for_pnp) {
+    cv::solvePnPRansac(front_end_data.object_frame_points,
+                       front_end_data.current_camera_pixels, K, cv::Mat(), r, t,
+                       false, pnp_method_enum);
+  } else {
+    cv::solvePnP(front_end_data.object_frame_points,
+                 front_end_data.current_camera_pixels, K, cv::Mat(), r, t,
+                 false, pnp_method_enum);
+  }
   cv::Mat R;
   cv::Rodrigues(r, R);
   Eigen::Isometry3d frame1_to_frame2 =

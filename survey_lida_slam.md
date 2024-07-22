@@ -61,6 +61,7 @@ Implementation Example: [Little SLAM](https://github.com/furo-org/LittleSLAM/tre
 
 3. Gaoxiang Fan Club
     - [高翔code](https://github.com/gaoxiang12/rgbd-slam-tutorial-gx/blob/master/part%20VII/src/detectFeatures.cpp)
+        - [Another place for code](https://github.com/gaoxiang12/slambook/blob/master/ch11/pose_graph_g2o_SE3.cpp)
     - [Blog](https://www.cnblogs.com/gaoxiang12/p/4659805.html)
     - [Another Guy's blog](https://www.cnblogs.com/mafuqiang/p/8302663.html)
 

@@ -124,6 +124,7 @@ int main(int argc, char *argv[]) {
   nh.getParam("image_num", image_num);
   nh.getParam("test_with_optimization", test_with_optimization);
   nh.getParam("pnp_method", pnp_method);
+  nh.getParam("use_ransac_for_pnp", slam_params.use_ransac_for_pnp);
   nh.getParam("do_ba_two_frames", slam_params.do_ba_two_frames);
   nh.getParam("do_ba_backend", slam_params.do_ba_backend);
   nh.getParam("min_depth", slam_params.min_depth);
@@ -131,7 +132,6 @@ int main(int argc, char *argv[]) {
   nh.getParam("verbose", slam_params.verbose);
   nh.getParam("pause_after_optimization", slam_params.pause_after_optimization);
   nh.getParam("initial_image_skip_num", slam_params.initial_image_skip_num);
-
   int pnp_method_enum = read_pnp_method(pnp_method);
 
   // Step 2: bagparser, topics and camera info
@@ -155,6 +155,7 @@ int main(int argc, char *argv[]) {
   ORBFeatureDetectionResult last_orb_result;
   FrontEndData front_end_data;
 
+  // Step 4: Skip a number of images for rapid debugging
   bp.fast_forward(RGB_TOPIC, slam_params.initial_image_skip_num);
   bp.fast_forward(DEPTH_TOPIC, slam_params.initial_image_skip_num);
 
@@ -185,21 +186,25 @@ int main(int argc, char *argv[]) {
         // if (verbose) debug_print_3D_points(estimate_3d, cam_info, pose,
         // depth_image);
       }
-      // Step 9: prepare output
+
       optimized_poses.push_back(pose);
-      add_point_cloud(pose, image, depth_image, cam_info, point_cloud,
-                      slam_params);
-      if (slam_params.pause_after_optimization) {
-        const std::string msg =
-            "Iteration " + std::to_string(i) + ", Please hit enter pause";
-        SimpleRoboticsCppUtils::sleep_or_pause_on_keystroke(
-            SimpleRoboticsCppUtils::to_ANSI_code(
-                SimpleRoboticsCppUtils::ANSIStrings::RED, msg),
-            1500);
+      // Step 9: prepare output when a certain threshold is hit
+      // TODO: BUG: pose should be relative to 10 frames before, not now.
+      if (i % 10 == 0) {
+        add_point_cloud(pose, image, depth_image, cam_info, point_cloud,
+                        slam_params);
+        if (slam_params.pause_after_optimization) {
+          const std::string msg =
+              "Iteration " + std::to_string(i) + ", Please hit enter pause";
+          SimpleRoboticsCppUtils::sleep_or_pause_on_keystroke(
+              SimpleRoboticsCppUtils::to_color_msg(
+                  SimpleRoboticsCppUtils::ANSIStrings::RED, msg, true),
+              1500);
+        }
+        // Step 10: global BA optimization (backend)
+        visualize_slam_results(optimized_poses, poses_pub, points_pub,
+                               point_cloud);
       }
-      // Step 10: global BA optimization (backend)
-      visualize_slam_results(optimized_poses, poses_pub, points_pub,
-                             point_cloud);
     }
     last_orb_result = std::move(orb_res);
     front_end_data = FrontEndData{std::move(image), std::move(depth_image)};

@@ -1,14 +1,15 @@
-image_skip_batch_num: 7
+image_skip_batch_num: 6
 image_num: 40
 test_with_optimization: true
-do_ba_two_frames: true
-do_ba_backend: false #not effective
 pnp_method: "epnp"
-# pnp_method: "dls"
+# pnp_method: "p3p"
+use_ransac_for_pnp: true
+do_ba_two_frames: false
+do_ba_backend: false #not effective
 min_depth: 0.2
-max_depth: 20.0
+max_depth: 10.0
 
 # Debugging Params
 verbose: false
-pause_after_optimization: true
-initial_image_skip_num: 119
+pause_after_optimization: false
+initial_image_skip_num: 0 #119
