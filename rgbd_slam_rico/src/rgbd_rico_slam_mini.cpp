@@ -16,9 +16,10 @@ SLAMParams read_params(ros::NodeHandle nh) {
   nh.getParam("test_with_optimization", slam_params.test_with_optimization);
   std::string pnp_method;
   nh.getParam("pnp_method", pnp_method);
-slam_params.pnp_method_enum = read_pnp_method(pnp_method);
+  slam_params.pnp_method_enum = read_pnp_method(pnp_method);
+  nh.getParam("downsample_point_cloud", slam_params.downsample_point_cloud);
+  nh.getParam("voxel_size", slam_params.voxel_size);
   nh.getParam("use_ransac_for_pnp", slam_params.use_ransac_for_pnp);
-  nh.getParam("do_ba_two_frames", slam_params.do_ba_two_frames);
   nh.getParam("do_ba_backend", slam_params.do_ba_backend);
   nh.getParam("min_depth", slam_params.min_depth);
   nh.getParam("max_depth", slam_params.max_depth);
@@ -44,7 +45,8 @@ int main(int argc, char *argv[]) {
   bp.fast_forward(RGB_TOPIC, slam_params.initial_image_skip_num);
   bp.fast_forward(DEPTH_TOPIC, slam_params.initial_image_skip_num);
 
-  // Step 3:using namespace RgbdSlamRico;using namespace RgbdSlamRico; initialize data structures for optimization
+  // Step 3:using namespace RgbdSlamRico;using namespace RgbdSlamRico;
+  // initialize data structures for optimization
   HandyCameraInfo cam_info = load_camera_info(bp, CAMERA_INFO_TOPIC);
   PointCloud::Ptr point_cloud(new PointCloud);
   point_cloud->header.frame_id = "camera";
@@ -53,7 +55,8 @@ int main(int argc, char *argv[]) {
   std::vector<KeyFrameData> keyframes;
   keyframes.reserve(100);
 
-    //  getting [initial_image_skip_num, initial_image_skip_num + image_skip_batch_num * image_num]
+  //  getting [initial_image_skip_num, initial_image_skip_num +
+  //  image_skip_batch_num * image_num]
   for (unsigned int i = slam_params.initial_image_skip_num;
        i < slam_params.initial_image_skip_num + slam_params.image_num; i++) {
     if (!ros::ok())
@@ -63,8 +66,7 @@ int main(int argc, char *argv[]) {
     bp.fast_forward(DEPTH_TOPIC, slam_params.image_skip_batch_num);
     KeyFrameData current_keyframe{load_next_image_TUM(bp, RGB_TOPIC, true),
                                   load_next_image_TUM(bp, DEPTH_TOPIC, false),
-                                  Eigen::Isometry3d::Identity()
-                                  };
+                                  Eigen::Isometry3d::Identity()};
     if (keyframes.empty()) {
       auto orb_features = get_valid_orb_features(slam_params, current_keyframe);
       if (orb_features.has_value()) {
@@ -74,35 +76,35 @@ int main(int argc, char *argv[]) {
       continue;
     }
     if (slam_params.test_with_optimization) {
-        auto frame1_to_frame2 = front_end(
-            cam_info, slam_params,
-            keyframes.back(), current_keyframe
-        );
-        if (!frame1_to_frame2.has_value()) continue;
+      auto frame1_to_frame2 =
+          front_end(cam_info, slam_params, keyframes.back(), current_keyframe);
+      if (!frame1_to_frame2.has_value())
+        continue;
 
-        current_keyframe.pose = keyframes.back().pose * frame1_to_frame2.value();
-        // if (verbose) debug_print_3D_points(estimate_3d, cam_info, pose,depth_image);
+      current_keyframe.pose = keyframes.back().pose * frame1_to_frame2.value();
+      // if (verbose) debug_print_3D_points(estimate_3d, cam_info,
+      // pose,depth_image);
     }
 
-    std::cout<<"keyframe depth size: "<<current_keyframe.depth_image.size()<<std::endl;
-    add_point_cloud(current_keyframe.pose, 
-        current_keyframe.image, current_keyframe.depth_image, cam_info,
-                point_cloud, slam_params);
+    std::cout << "keyframe depth size: " << current_keyframe.depth_image.size()
+              << std::endl;
+    add_point_cloud(current_keyframe.pose, current_keyframe.image,
+                    current_keyframe.depth_image, cam_info, point_cloud,
+                    slam_params);
     if (slam_params.pause_after_optimization) {
-        const std::string msg =
-            "Iteration " + std::to_string(i) + ", Please hit enter pause";
-        SimpleRoboticsCppUtils::sleep_or_pause_on_keystroke(
-            SimpleRoboticsCppUtils::to_color_msg(
-                SimpleRoboticsCppUtils::ANSIStrings::RED, msg,
-                true),
-            1500);
+      const std::string msg =
+          "Iteration " + std::to_string(i) + ", Please hit enter pause";
+      SimpleRoboticsCppUtils::sleep_or_pause_on_keystroke(
+          SimpleRoboticsCppUtils::to_color_msg(
+              SimpleRoboticsCppUtils::ANSIStrings::RED, msg, true),
+          1500);
     }
     // so current_keyframe is invalidated
     keyframes.emplace_back(std::move(current_keyframe));
     visualize_slam_results(keyframes, poses_pub, points_pub, point_cloud);
   }
 
-    //             // Step 10: global BA optimization (backend)
+  //             // Step 10: global BA optimization (backend)
   ros::spin();
 
   return 0;

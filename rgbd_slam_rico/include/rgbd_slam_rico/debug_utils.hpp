@@ -1,17 +1,18 @@
 #pragma once
-#include "simple_robotics_cpp_utils/io_utils.hpp"
-#include "rgbd_slam_rico/rgbd_rico_slam_frontend.hpp"
 #include "rgbd_slam_rico/orb_feature_detection.hpp"
-#include <pcl/point_types.h>
-#include <pcl_ros/point_cloud.h>
+#include "rgbd_slam_rico/rgbd_rico_slam_frontend.hpp"
+#include "simple_robotics_cpp_utils/io_utils.hpp"
+#include <Eigen/Geometry>
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseArray.h>
 #include <memory>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/point_types.h>
+#include <pcl_ros/point_cloud.h>
 #include <ros/package.h>
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <Eigen/Geometry>
 
 // Define the IO format to print on one line
 Eigen::IOFormat eigen_1_line_fmt(Eigen::StreamPrecision, Eigen::DontAlignCols,
@@ -19,15 +20,15 @@ Eigen::IOFormat eigen_1_line_fmt(Eigen::StreamPrecision, Eigen::DontAlignCols,
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 using namespace RgbdSlamRico;
 
-void visualize_slam_results(
-    const std::vector<KeyFrameData> &keyframes,
-    ros::Publisher &poses_publisher, ros::Publisher &point_cloud_publisher,
-    PointCloud::Ptr point_cloud) {
+void visualize_slam_results(const std::vector<KeyFrameData> &keyframes,
+                            ros::Publisher &poses_publisher,
+                            ros::Publisher &point_cloud_publisher,
+                            PointCloud::Ptr point_cloud) {
   geometry_msgs::PoseArray pose_array;
   pose_array.header.stamp = ros::Time::now();
   pose_array.header.frame_id = "camera";
 
-  for (const auto& f: keyframes) {
+  for (const auto &f : keyframes) {
     const auto &pose = f.pose;
     geometry_msgs::Pose p;
     p.position.x = pose.translation().x();
@@ -80,6 +81,22 @@ void add_point_cloud(const Eigen::Isometry3d &world_to_cam,
   point_cloud->width = point_cloud->points.size();
   // still say is not dense so there might be invalid points
   point_cloud->is_dense = false;
+
+  if (slam_params.downsample_point_cloud) {
+    // Create a downsampled point cloud object
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsampled_cloud(
+        new pcl::PointCloud<pcl::PointXYZRGB>());
+
+    // Create the VoxelGrid filter and set its parameters
+    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+    sor.setInputCloud(point_cloud);
+    sor.setLeafSize(slam_params.voxel_size, slam_params.voxel_size,
+                    slam_params.voxel_size);
+    sor.filter(*downsampled_cloud);
+    // TODO: not sure if this boost shared pointer will cause memory leaks
+    point_cloud->clear();
+    *point_cloud = *downsampled_cloud;
+  }
 }
 
 // /**

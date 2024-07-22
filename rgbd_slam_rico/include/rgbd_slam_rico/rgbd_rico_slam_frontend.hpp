@@ -24,12 +24,15 @@ struct SLAMParams {
   double max_depth = 20.0;
   double min_depth = 0.3;
   bool use_ransac_for_pnp = false;
-  bool do_ba_two_frames = true;
-  int min_matches_num = 5;
-    double min_interframe_rotation_thre = 0.05;
-    double min_interframe_translation_thre = 0.05;
-    double max_interframe_rotation_thre = 1.57;
-    double max_interframe_translation_thre = 1.0;
+  int min_matches_num =
+      6; //> DLT algorithm needs at least 6 points for pose estimation from
+         //3D-2D point correspondences. (expected: 'count >= 6'), where
+  double min_interframe_rotation_thre = 0.05;
+  double min_interframe_translation_thre = 0.05;
+  double max_interframe_rotation_thre = 1.57;
+  double max_interframe_translation_thre = 1.0;
+  bool downsample_point_cloud = false;
+  float voxel_size = 0.01;
 
   // Debugging params
   bool verbose = false;
@@ -161,9 +164,10 @@ get_object_and_2d_points(std::vector<cv::Point3f> &object_frame_points,
  * yielded. You will have to rely on global optimization, which is a hit or miss
  * TODO
  */
-inline std::optional<Eigen::Isometry3d> front_end(
-    const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
-    const KeyFrameData &previous_keyframe, KeyFrameData &current_keyframe) {
+inline std::optional<Eigen::Isometry3d>
+front_end(const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
+          const KeyFrameData &previous_keyframe,
+          KeyFrameData &current_keyframe) {
   auto orb_res_optional = get_valid_orb_features(slam_params, current_keyframe);
   if (!orb_res_optional.has_value())
     return std::nullopt;
@@ -190,29 +194,36 @@ inline std::optional<Eigen::Isometry3d> front_end(
 
   cv::Mat r, t;
   if (slam_params.use_ransac_for_pnp) {
-      cv::solvePnPRansac(object_frame_points,
-                      current_camera_pixels, K, cv::Mat(), r,
-                      t, false, slam_params.pnp_method_enum);
+    // TODO
+    std::cout << "obj size: " << object_frame_points.size() << std::endl;
+    std::cout << "pixel size: " << current_camera_pixels.size() << std::endl;
+    std::cout << "good match size: " << good_matches.size()
+              << ", slam_params.min_matches_numL "
+              << slam_params.min_matches_num << std::endl;
+
+    cv::solvePnPRansac(object_frame_points, current_camera_pixels, K, cv::Mat(),
+                       r, t, false, slam_params.pnp_method_enum);
   } else {
-      cv::solvePnP(object_frame_points,
-                  current_camera_pixels, K, cv::Mat(), r, t,
-                  false, slam_params.pnp_method_enum);
+    cv::solvePnP(object_frame_points, current_camera_pixels, K, cv::Mat(), r, t,
+                 false, slam_params.pnp_method_enum);
   }
 
   // Step 2: checks:
   const double r_norm = cv::norm(r);
   const double t_norm = cv::norm(t);
-  if (r_norm < slam_params.min_interframe_rotation_thre && 
-    t_norm < slam_params.min_interframe_translation_thre){
-        std::cerr<<"r and t norm are smaller than motion thresholds. Skip."<<std::endl;
-        return std::nullopt;
-    }
+  if (r_norm < slam_params.min_interframe_rotation_thre &&
+      t_norm < slam_params.min_interframe_translation_thre) {
+    std::cerr << "r and t norm are smaller than motion thresholds. Skip."
+              << std::endl;
+    return std::nullopt;
+  }
 
   if (r_norm > slam_params.max_interframe_rotation_thre ||
-    t_norm > slam_params.max_interframe_translation_thre){
-        std::cerr<<"r and/or t norm is greater than motion thresholds. Skip."<<std::endl;
-        return std::nullopt;
-    }
+      t_norm > slam_params.max_interframe_translation_thre) {
+    std::cerr << "r and/or t norm is greater than motion thresholds. Skip."
+              << std::endl;
+    return std::nullopt;
+  }
 
   cv::Mat R;
   cv::Rodrigues(r, R);
