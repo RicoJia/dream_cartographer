@@ -13,6 +13,7 @@ min_interframe_rotation_thre: 0.05 #2.84 deg
 min_interframe_translation_thre: 0.05
 max_interframe_rotation_thre: 1.57 #90 deg
 max_interframe_translation_thre: 1.0
+nearby_vertex_check_num: 3
 
 # Debugging Params
 verbose: false

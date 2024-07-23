@@ -34,6 +34,7 @@ struct SLAMParams {
   double max_interframe_translation_thre = 1.0;
   bool downsample_point_cloud = false;
   float voxel_size = 0.01;
+  int nearby_vertex_check_num = 0;
 
   // Debugging params
   bool verbose = false;
@@ -57,6 +58,7 @@ struct KeyFrameData {
   cv::Mat image;
   cv::Mat depth_image;
   Eigen::Isometry3d pose;
+  unsigned int index;
   ORBFeatureDetectionResult orb_res;
 };
 
@@ -170,11 +172,7 @@ get_object_and_2d_points(std::vector<cv::Point3f> &object_frame_points,
 inline std::optional<Eigen::Isometry3d>
 front_end(const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
           const KeyFrameData &previous_keyframe,
-          KeyFrameData &current_keyframe) {
-  auto orb_res_optional = get_valid_orb_features(slam_params, current_keyframe);
-  if (!orb_res_optional.has_value())
-    return std::nullopt;
-  current_keyframe.orb_res = orb_res_optional.value();
+          const KeyFrameData &current_keyframe) {
   // Step 6: Match features
   auto good_matches = find_matches_and_draw_them(
       previous_keyframe.orb_res, current_keyframe.orb_res, false);
@@ -205,7 +203,7 @@ front_end(const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
               << slam_params.min_matches_num << std::endl;
     try {
       // There's a bug where solvePnPRansac could have less than 6 points for
-      // the DLT solver it uses. Related:
+      // the DLT solver it uses in solvePnP. Related:
       // https://github.com/opencv/opencv/pull/19253#discussion_r570670642
       cv::solvePnPRansac(object_frame_points, current_camera_pixels, K,
                          cv::Mat(), r, t, false, slam_params.pnp_method_enum);

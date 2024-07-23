@@ -52,7 +52,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y \
-    gdb
+    gdb \
+    libsuitesparse-dev
 
 ENV CCACHE_DIR=/ccache
 ENV CC="ccache gcc"

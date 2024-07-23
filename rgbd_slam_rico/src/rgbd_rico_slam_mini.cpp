@@ -19,6 +19,8 @@ SLAMParams read_params(ros::NodeHandle nh) {
   slam_params.pnp_method_enum = read_pnp_method(pnp_method);
   nh.getParam("downsample_point_cloud", slam_params.downsample_point_cloud);
   nh.getParam("voxel_size", slam_params.voxel_size);
+  nh.getParam("nearby_vertex_check_num", slam_params.nearby_vertex_check_num);
+
   nh.getParam("use_ransac_for_pnp", slam_params.use_ransac_for_pnp);
   nh.getParam("do_ba_backend", slam_params.do_ba_backend);
   nh.getParam("min_depth", slam_params.min_depth);
@@ -27,6 +29,29 @@ SLAMParams read_params(ros::NodeHandle nh) {
   nh.getParam("pause_after_optimization", slam_params.pause_after_optimization);
   nh.getParam("initial_image_skip_num", slam_params.initial_image_skip_num);
   return slam_params;
+}
+
+void add_edges_to_nearby_vertices(const KeyFrameData &current_keyframe,
+                                  const std::vector<KeyFrameData> &keyframes,
+                                  const HandyCameraInfo &cam_info,
+                                  const SLAMParams &slam_params) {
+  int start_index = std::max(static_cast<int>(keyframes.size()) -
+                                 slam_params.nearby_vertex_check_num,
+                             0);
+  int end_index =
+      keyframes.size() -
+      1; // keyframes.size()-1 because we already checked the last one
+  // TODO
+  std::cout << "Checking nearby vertices [from, to): " << start_index << ", "
+            << end_index << std::endl;
+  for (int i = start_index; i < end_index; ++i) {
+    auto frame1_to_frame2 =
+        front_end(cam_info, slam_params, keyframes.back(), current_keyframe);
+    if (frame1_to_frame2.has_value()) {
+      add_to_graph(current_keyframe, keyframes.back(), frame1_to_frame2.value(),
+                   true);
+    }
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -66,28 +91,36 @@ int main(int argc, char *argv[]) {
     bp.fast_forward(DEPTH_TOPIC, slam_params.image_skip_batch_num);
     KeyFrameData current_keyframe{load_next_image_TUM(bp, RGB_TOPIC, true),
                                   load_next_image_TUM(bp, DEPTH_TOPIC, false),
-                                  Eigen::Isometry3d::Identity()};
+                                  Eigen::Isometry3d::Identity(), i};
+    // Step 5: detect ORB features
+    auto orb_features = get_valid_orb_features(slam_params, current_keyframe);
+    if (!orb_features.has_value())
+      continue;
+    current_keyframe.orb_res = orb_features.value();
+    // Step 6: Initialize
     if (keyframes.empty()) {
-      auto orb_features = get_valid_orb_features(slam_params, current_keyframe);
-      if (orb_features.has_value()) {
-        current_keyframe.orb_res = orb_features.value();
-        keyframes.emplace_back(std::move(current_keyframe));
-      }
+      initialize_global_optimizer(slam_params.verbose, current_keyframe);
+      keyframes.emplace_back(std::move(current_keyframe));
       continue;
     }
+
     if (slam_params.test_with_optimization) {
       auto frame1_to_frame2 =
           front_end(cam_info, slam_params, keyframes.back(), current_keyframe);
       if (!frame1_to_frame2.has_value())
         continue;
+      add_to_graph(current_keyframe, keyframes.back(), frame1_to_frame2.value(),
+                   true);
 
+      if (slam_params.do_ba_backend) {
+        add_edges_to_nearby_vertices(current_keyframe, keyframes, cam_info,
+                                     slam_params);
+      }
+      // This pose is not used by global optimizer. This is for visualization
+      // only
       current_keyframe.pose = keyframes.back().pose * frame1_to_frame2.value();
-      // if (verbose) debug_print_3D_points(estimate_3d, cam_info,
-      // pose,depth_image);
     }
 
-    std::cout << "keyframe depth size: " << current_keyframe.depth_image.size()
-              << std::endl;
     add_point_cloud(current_keyframe.pose, current_keyframe.image,
                     current_keyframe.depth_image, cam_info, point_cloud,
                     slam_params);
@@ -104,7 +137,7 @@ int main(int argc, char *argv[]) {
     visualize_slam_results(keyframes, poses_pub, points_pub, point_cloud);
   }
 
-  //             // Step 10: global BA optimization (backend)
+  // Step 10: global BA optimization (backend)
   ros::spin();
 
   return 0;
