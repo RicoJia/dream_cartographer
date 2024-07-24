@@ -7,10 +7,18 @@ This repo contains 1. my implementation of his RGBD SLAM 2. RGBD SLAM V2 (Endres
 
 2. Start the docker container: `./start_rgbd_slam_docker.sh`
 
+3. In the container, do
+
+```bash
+catkin build -j5
+source devel/setup.bash
+roslaunch rgbd_slam_rico rgbd_slam_rico.launch 
+```
+
 ## Benchmarking
 
 The benchmarking dataset comes from the [TUM dataset](https://cvg.cit.tum.de/data/datasets/rgbd-dataset). 
-According to the [download page](https://cvg.cit.tum.de/data/datasets/rgbd-dataset/download), I'm using an xyz dataset. The true trajectory is also provided (TODO)
+According to the [download page](https://cvg.cit.tum.de/data/datasets/rgbd-dataset/download), I'm using an xyz dataset. The true trajectory is also provided (It's a TODO for now)
 
 ## Results
 
