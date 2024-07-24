@@ -1,8 +1,8 @@
 initial_image_skip_num: 0 #119
 image_skip_batch_num: 4
-image_num: 170
+image_num: 90
 test_with_optimization: true
-pnp_method: "epnp"
+pnp_method: "p3p"
 downsample_point_cloud: true
 # pnp_method: "p3p"
 use_ransac_for_pnp: true
@@ -14,8 +14,8 @@ min_interframe_translation_thre: 0.1
 max_interframe_rotation_thre: 1.04 #60 deg
 max_interframe_translation_thre: 1.0
 # Optimization Params
-nearby_vertex_check_num: 15
-random_vertex_check_num: 20
+nearby_vertex_check_num: 20
+random_vertex_check_num: 70
 # "Cauchy", "Huber"
 robust_kernel_name: "Cauchy"
 
