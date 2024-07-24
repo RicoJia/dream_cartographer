@@ -29,9 +29,12 @@ Without Optimization, the raw inputs are RGB and Depth images (which visualizes 
 
 This mini RGBD SLAM system first performs the front end, then the backend. It's not parallelized, or partially implemented on a GPU (My laptop has an Intel i5 core with no GPU, that's why). Well, it's a proof of concept mostly for learning purposes still. The 
 
-Below images shows the rough estimate given by the front end (`cv::solvePnPRansac` based), and the optimization performed by `g2o`.
-**Click on the images for a video demo**
+Below image shows the final result after:
 
+1. Rough frame-to-frame estimates are given by the front end (`cv::solvePnPRansac` based)
+2. Pose Graph bundle adjustment gets performed by `g2o`.
+
+**Click on the image to see a video demo**
 
 <a href="https://youtu.be/jCsX9R2aa-I?si=R_DvmD0d8iOKy40Q">
     <img src="https://github.com/user-attachments/assets/20988112-f742-41ee-9e2e-44e87d02be19" height="300" alt=""/>
@@ -40,4 +43,3 @@ Below images shows the rough estimate given by the front end (`cv::solvePnPRansa
 ## Further Reading
 
 [I wrote a blog series about the theory and implementation of the VSLAM system that I built.](https://ricojia.github.io/2024/07/09/rgbd-slam-pnp.html)
-
