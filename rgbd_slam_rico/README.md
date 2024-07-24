@@ -1,6 +1,6 @@
 # RGBD SLAM Rico
 
-This repo contains 1. my implementation of his RGBD SLAM 2. RGBD SLAM V2 (Endres et al.). 
+This repo contains 1. my implementation of his RGBD SLAM, inspired by [RGBD SLAM v2 from Endres et al.](https://felixendres.github.io/rgbdslam_v2/)
 
 ## Usage
 1. Build the docker image `docker build --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) -t dream-rgbd-rico .`
