@@ -63,8 +63,7 @@ void add_point_cloud(const Eigen::Isometry3d &world_to_cam,
       auto p_canonical = SimpleRoboticsCppUtils::pixel2cam({u, v}, cam_info.K);
       Eigen::Vector3d point{p_canonical.x * depth, p_canonical.y * depth,
                             depth};
-      // SolvePnP gives world -> camera world_to_cam. TODO: so we need to
-      // inverse this?
+      // SolvePnP gives world -> camera world_to_cam.
       auto world_point = cam_to_world * point;
       // Again, welcome to the BGR world
       cv::Vec3b bgr = image.at<cv::Vec3b>(v, u);
@@ -96,6 +95,39 @@ void add_point_cloud(const Eigen::Isometry3d &world_to_cam,
     // TODO: not sure if this boost shared pointer will cause memory leaks
     point_cloud->clear();
     *point_cloud = *downsampled_cloud;
+  }
+}
+
+// Function to print vertices
+void printVertices(const g2o::SparseOptimizer &optimizer) {
+  std::cout << "Vertices in the optimizer:" << std::endl;
+  for (const auto &vertex_pair : optimizer.vertices()) {
+    const g2o::OptimizableGraph::Vertex *vertex =
+        static_cast<const g2o::OptimizableGraph::Vertex *>(vertex_pair.second);
+    std::cout << "Vertex ID: " << vertex->id() << std::endl;
+    // Add more details as needed
+  }
+}
+
+// Function to print edges
+void printEdges(const g2o::SparseOptimizer &optimizer) {
+  std::cout << "Edges in the optimizer:" << std::endl;
+  for (const auto &edge : optimizer.edges()) {
+    const g2o::OptimizableGraph::Edge *e =
+        static_cast<const g2o::OptimizableGraph::Edge *>(edge);
+    std::cout << "Edge ID: " << e->id() << ", connects vertices ";
+    for (size_t i = 0; i < e->vertices().size(); ++i) {
+      const g2o::OptimizableGraph::Vertex *v =
+          static_cast<const g2o::OptimizableGraph::Vertex *>(e->vertices()[i]);
+      if (v) {
+        std::cout << v->id();
+        if (i < e->vertices().size() - 1) {
+          std::cout << " -> ";
+        }
+      }
+    }
+    std::cout << std::endl;
+    // Add more details as needed
   }
 }
 

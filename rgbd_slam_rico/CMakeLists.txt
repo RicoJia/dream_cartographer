@@ -5,7 +5,7 @@ add_compile_options(-std=c++2a)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # # TODO: need to set to release mode
-# set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Debug)
 
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)

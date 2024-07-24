@@ -20,6 +20,8 @@ SLAMParams read_params(ros::NodeHandle nh) {
   nh.getParam("downsample_point_cloud", slam_params.downsample_point_cloud);
   nh.getParam("voxel_size", slam_params.voxel_size);
   nh.getParam("nearby_vertex_check_num", slam_params.nearby_vertex_check_num);
+  nh.getParam("random_vertex_check_num", slam_params.random_vertex_check_num);
+  nh.getParam("robust_kernel_name", slam_params.robust_kernel_name);
 
   nh.getParam("use_ransac_for_pnp", slam_params.use_ransac_for_pnp);
   nh.getParam("do_ba_backend", slam_params.do_ba_backend);
@@ -29,29 +31,6 @@ SLAMParams read_params(ros::NodeHandle nh) {
   nh.getParam("pause_after_optimization", slam_params.pause_after_optimization);
   nh.getParam("initial_image_skip_num", slam_params.initial_image_skip_num);
   return slam_params;
-}
-
-void add_edges_to_nearby_vertices(const KeyFrameData &current_keyframe,
-                                  const std::vector<KeyFrameData> &keyframes,
-                                  const HandyCameraInfo &cam_info,
-                                  const SLAMParams &slam_params) {
-  int start_index = std::max(static_cast<int>(keyframes.size()) -
-                                 slam_params.nearby_vertex_check_num,
-                             0);
-  int end_index =
-      keyframes.size() -
-      1; // keyframes.size()-1 because we already checked the last one
-  // TODO
-  std::cout << "Checking nearby vertices [from, to): " << start_index << ", "
-            << end_index << std::endl;
-  for (int i = start_index; i < end_index; ++i) {
-    auto frame1_to_frame2 =
-        front_end(cam_info, slam_params, keyframes.back(), current_keyframe);
-    if (frame1_to_frame2.has_value()) {
-      add_to_graph(current_keyframe, keyframes.back(), frame1_to_frame2.value(),
-                   true);
-    }
-  }
 }
 
 int main(int argc, char *argv[]) {
@@ -97,6 +76,8 @@ int main(int argc, char *argv[]) {
     if (!orb_features.has_value())
       continue;
     current_keyframe.orb_res = orb_features.value();
+    filter_orb_result_with_valid_depths(current_keyframe.depth_image,
+                                        slam_params, current_keyframe.orb_res);
     // Step 6: Initialize
     if (keyframes.empty()) {
       initialize_global_optimizer(slam_params.verbose, current_keyframe);
@@ -109,12 +90,13 @@ int main(int argc, char *argv[]) {
           front_end(cam_info, slam_params, keyframes.back(), current_keyframe);
       if (!frame1_to_frame2.has_value())
         continue;
-      add_to_graph(current_keyframe, keyframes.back(), frame1_to_frame2.value(),
-                   true);
+      add_single_frame_to_graph(keyframes.back(), current_keyframe,
+                                frame1_to_frame2.value(), true,
+                                slam_params.robust_kernel_name);
 
       if (slam_params.do_ba_backend) {
-        add_edges_to_nearby_vertices(current_keyframe, keyframes, cam_info,
-                                     slam_params);
+        add_edges_to_previous_vertices(current_keyframe, keyframes, cam_info,
+                                       slam_params, EdgeAdditionMode::NEARBY);
       }
       // This pose is not used by global optimizer. This is for visualization
       // only
@@ -135,9 +117,19 @@ int main(int argc, char *argv[]) {
     // so current_keyframe is invalidated
     keyframes.emplace_back(std::move(current_keyframe));
     visualize_slam_results(keyframes, poses_pub, points_pub, point_cloud);
-  }
+  } // end for
 
   // Step 10: global BA optimization (backend)
+  backend_optimize(keyframes);
+  point_cloud->clear();
+  for (unsigned int i = 0; i < keyframes.size(); ++i) {
+    auto &k = keyframes.at(i);
+    add_point_cloud(k.pose, k.image, k.depth_image, cam_info, point_cloud,
+                    slam_params);
+  }
+  std::cout << "finished optimization" << std::endl;
+  visualize_slam_results(keyframes, poses_pub, points_pub, point_cloud);
+
   ros::spin();
 
   return 0;

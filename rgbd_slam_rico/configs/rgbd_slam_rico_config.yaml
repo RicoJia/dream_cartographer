@@ -1,21 +1,25 @@
-initial_image_skip_num: 40 #119
+initial_image_skip_num: 0 #119
 image_skip_batch_num: 4
-image_num: 60
+image_num: 170
 test_with_optimization: true
-pnp_method: "iterative"
+pnp_method: "epnp"
 downsample_point_cloud: true
 # pnp_method: "p3p"
 use_ransac_for_pnp: true
-do_ba_backend: false #not effective
+do_ba_backend: true #not effective
 min_depth: 0.2
-max_depth: 10.0
-min_interframe_rotation_thre: 0.05 #2.84 deg
-min_interframe_translation_thre: 0.05
-max_interframe_rotation_thre: 1.57 #90 deg
+max_depth: 11.0
+min_interframe_rotation_thre: 0.1 #5.72
+min_interframe_translation_thre: 0.1
+max_interframe_rotation_thre: 1.04 #60 deg
 max_interframe_translation_thre: 1.0
-nearby_vertex_check_num: 3
+# Optimization Params
+nearby_vertex_check_num: 15
+random_vertex_check_num: 20
+# "Cauchy", "Huber"
+robust_kernel_name: "Cauchy"
 
 # Debugging Params
 verbose: false
 pause_after_optimization: false
-voxel_size: 0.013
+voxel_size: 0.014

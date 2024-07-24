@@ -35,7 +35,8 @@ struct SLAMParams {
   bool downsample_point_cloud = false;
   float voxel_size = 0.01;
   int nearby_vertex_check_num = 0;
-
+  int random_vertex_check_num = 0;
+  std::string robust_kernel_name = "Cauchy";
   // Debugging params
   bool verbose = false;
   bool do_ba_backend = true;
@@ -97,36 +98,26 @@ get_valid_orb_features(const SLAMParams &slam_params,
 }
 
 /**
- * @brief filter out matches with invalid depths IN PLACE, i.e., depth outside
- * of [min_threshold, max_threshold]
- *
- * @param matches : point matches across two RGB images
- * @param depth1 : depth image of the first RGB image
- * @param depth2 : depth image of the second RGB image
+ * @brief filter out orb results with invalid depths IN PLACE, i.e., depth
+ * outside of [min_threshold, max_threshold]
  */
-inline void filter_point_matches_with_valid_depths(
-    std::vector<cv::DMatch> &matches, const cv::Mat &depth_img1,
-    const cv::Mat &depth_img2, const ORBFeatureDetectionResult &res1,
-    const ORBFeatureDetectionResult &res2, const SLAMParams &slam_params) {
-  // NEED TO TEST??
-  auto remove_invalid_matches = [&](const cv::DMatch &match) {
-    auto p1 = res1.keypoints.at(match.queryIdx).pt;
-    double depth1 = depth_img1.at<float>(int(p1.y), int(p1.x));
-    if (std::isnan(depth1) || depth1 < slam_params.min_depth ||
-        depth1 > slam_params.max_depth)
-      return true;
-
-    auto p2 = res2.keypoints.at(match.trainIdx).pt;
-    double depth2 = depth_img2.at<float>(int(p2.y), int(p2.x));
-    if (std::isnan(depth2) || depth2 < slam_params.min_depth ||
-        depth2 > slam_params.max_depth)
-      return true;
-
-    return false;
-  };
-  auto new_end =
-      std::remove_if(matches.begin(), matches.end(), remove_invalid_matches);
-  matches.erase(new_end, matches.end());
+void filter_orb_result_with_valid_depths(const cv::Mat &depth_img,
+                                         const SLAMParams &slam_params,
+                                         ORBFeatureDetectionResult &res) {
+  std::vector<cv::KeyPoint> keypoints;
+  keypoints.reserve(res.keypoints.size());
+  cv::Mat descriptor;
+  for (unsigned int i = 0; i < res.keypoints.size(); ++i) {
+    auto &p = res.keypoints.at(i).pt;
+    double depth = depth_img.at<float>(int(p.y), int(p.x));
+    if (!(std::isnan(depth) || depth < slam_params.min_depth ||
+          depth > slam_params.max_depth)) {
+      keypoints.emplace_back(res.keypoints.at(i));
+      descriptor.push_back(res.descriptor.row(static_cast<int>(i)));
+    }
+  }
+  res.keypoints = std::move(keypoints);
+  res.descriptor = std::move(descriptor);
 }
 
 /**
@@ -176,9 +167,6 @@ front_end(const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
   // Step 6: Match features
   auto good_matches = find_matches_and_draw_them(
       previous_keyframe.orb_res, current_keyframe.orb_res, false);
-  filter_point_matches_with_valid_depths(
-      good_matches, previous_keyframe.depth_image, current_keyframe.depth_image,
-      previous_keyframe.orb_res, current_keyframe.orb_res, slam_params);
   if (good_matches.size() < slam_params.min_matches_num) {
     std::cerr << "Not enough feature matches" << std::endl;
     return std::nullopt;
@@ -195,12 +183,6 @@ front_end(const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
 
   cv::Mat r, t;
   if (slam_params.use_ransac_for_pnp) {
-    // TODO
-    std::cout << "obj size: " << object_frame_points.size() << std::endl;
-    std::cout << "pixel size: " << current_camera_pixels.size() << std::endl;
-    std::cout << "good match size: " << good_matches.size()
-              << ", slam_params.min_matches_numL "
-              << slam_params.min_matches_num << std::endl;
     try {
       // There's a bug where solvePnPRansac could have less than 6 points for
       // the DLT solver it uses in solvePnP. Related:
