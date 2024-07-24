@@ -53,8 +53,8 @@ void add_point_cloud(const Eigen::Isometry3d &world_to_cam,
                      PointCloud::Ptr point_cloud,
                      const SLAMParams &slam_params) {
   auto cam_to_world = world_to_cam.inverse();
-  std::cout << "point cloud addition, pose: " << world_to_cam.matrix()
-            << std::endl;
+  //   std::cout << "point cloud addition, pose: " << world_to_cam.matrix()
+  //             << std::endl;
   for (float v = 0; v < depth_image.rows; ++v) {
     for (float u = 0; u < depth_image.rows; ++u) {
       // step 1: get depth

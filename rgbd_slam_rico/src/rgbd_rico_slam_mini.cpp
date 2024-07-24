@@ -122,13 +122,16 @@ int main(int argc, char *argv[]) {
   // Step 10: global BA optimization (backend)
   backend_optimize(keyframes);
   point_cloud->clear();
+  // TODO
+  std::cout << "Finished optimization. Adding point cloud now."
+            << ros::Time::now() << std::endl;
   for (unsigned int i = 0; i < keyframes.size(); ++i) {
     auto &k = keyframes.at(i);
     add_point_cloud(k.pose, k.image, k.depth_image, cam_info, point_cloud,
                     slam_params);
   }
-  std::cout << "finished optimization" << std::endl;
   visualize_slam_results(keyframes, poses_pub, points_pub, point_cloud);
+  std::cout << "Finished point cloud addition" << ros::Time::now() << std::endl;
 
   ros::spin();
 

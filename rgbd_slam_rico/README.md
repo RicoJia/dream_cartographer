@@ -32,9 +32,9 @@ This mini RGBD SLAM system first performs the front end, then the backend. It's 
 Below images shows the rough estimate given by the front end (`cv::solvePnPRansac` based), and the optimization performed by `g2o`.
 **Click on the images for a video demo**
 
+
 <a href="https://youtu.be/jCsX9R2aa-I?si=R_DvmD0d8iOKy40Q">
-    <img src="https://github.com/user-attachments/assets/315c0b15-6845-4a57-8bd1-bfdd7f193eb0" height="250" alt=""/>
-    <img src="https://github.com/user-attachments/assets/f748a94e-de38-4f72-86f6-c375737e4cb5" height="250" alt=""/>
+    <img src="https://github.com/user-attachments/assets/20988112-f742-41ee-9e2e-44e87d02be19" height="300" alt=""/>
 </a>
 
 ## Further Reading
