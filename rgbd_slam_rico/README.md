@@ -33,6 +33,7 @@ Below image shows the final result after:
 
 1. Rough frame-to-frame estimates are given by the front end (`cv::solvePnPRansac` based)
 2. Pose Graph bundle adjustment gets performed by `g2o`.
+3. Downsample the resultant point cloud into a coarser voxel grid
 
 **Click on the image to see a video demo**
 

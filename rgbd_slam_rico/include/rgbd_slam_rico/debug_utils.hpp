@@ -55,10 +55,16 @@ void add_point_cloud(const Eigen::Isometry3d &world_to_cam,
   auto cam_to_world = world_to_cam.inverse();
   //   std::cout << "point cloud addition, pose: " << world_to_cam.matrix()
   //             << std::endl;
+    point_cloud->points.reserve(
+        point_cloud->points.size() + depth_image.rows * depth_image.cols
+    );
   for (float v = 0; v < depth_image.rows; ++v) {
-    for (float u = 0; u < depth_image.rows; ++u) {
+    for (float u = 0; u < depth_image.cols; ++u) {
       // step 1: get depth
       double depth = depth_image.at<float>(v, u);
+        if (std::isnan(depth) || depth < slam_params.min_depth ||
+          depth > slam_params.max_depth) continue;
+
       // step 2: get canonical coords, and 3D point
       auto p_canonical = SimpleRoboticsCppUtils::pixel2cam({u, v}, cam_info.K);
       Eigen::Vector3d point{p_canonical.x * depth, p_canonical.y * depth,
@@ -74,7 +80,7 @@ void add_point_cloud(const Eigen::Isometry3d &world_to_cam,
       pcl_point.r = bgr[2];
       pcl_point.g = bgr[1];
       pcl_point.b = bgr[0];
-      point_cloud->points.push_back(pcl_point);
+      point_cloud->points.emplace_back(std::move(pcl_point));
     }
   }
   point_cloud->width = point_cloud->points.size();
@@ -94,7 +100,7 @@ void add_point_cloud(const Eigen::Isometry3d &world_to_cam,
     sor.filter(*downsampled_cloud);
     // TODO: not sure if this boost shared pointer will cause memory leaks
     point_cloud->clear();
-    *point_cloud = *downsampled_cloud;
+    point_cloud -> swap(*downsampled_cloud);
   }
 }
 
