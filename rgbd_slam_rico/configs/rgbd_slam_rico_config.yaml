@@ -1,3 +1,5 @@
+bag_name: "/data/rgbd_dataset_freiburg1_xyz.bag"
+
 initial_image_skip_num: 0 #119
 image_skip_batch_num: 4
 image_num: 90
@@ -9,6 +11,7 @@ use_ransac_for_pnp: true
 do_ba_backend: true #not effective
 min_depth: 0.2
 max_depth: 11.0
+min_ransac_feature_inliers: 10
 min_interframe_rotation_thre: 0.1 #5.72
 min_interframe_translation_thre: 0.1
 max_interframe_rotation_thre: 1.04 #60 deg

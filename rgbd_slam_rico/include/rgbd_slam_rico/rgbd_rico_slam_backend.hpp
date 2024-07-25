@@ -103,7 +103,7 @@ void add_single_frame_to_graph(const KeyFrameData &frame1,
               << std::endl;
     std::cerr << "frame1 index: " << frame1.index
               << ", frame2 index: " << frame2.index << std::endl;
-    printVertices(global_optimizer);
+    print_vertices(global_optimizer);
   }
   // Information matrix is to estimate how good this edge estimate is.
   // It's the inverse of covariance matrix. It's 6d because a transform is 6d.
@@ -170,8 +170,8 @@ void add_edges_to_previous_vertices(
  * @param keyframes
  */
 void backend_optimize(std::vector<KeyFrameData> &keyframes) {
-  printVertices(global_optimizer);
-  printEdges(global_optimizer);
+  print_vertices(global_optimizer);
+  print_edges(global_optimizer);
 
   global_optimizer.initializeOptimization();
   global_optimizer.optimize(100);

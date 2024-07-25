@@ -22,12 +22,16 @@ namespace RgbdSlamRico {
 /************************************** Data Structures
  * **************************************/
 struct SLAMParams {
+  // Data params
+  std::string bag_name = "";
+
   double max_depth = 20.0;
   double min_depth = 0.3;
   bool use_ransac_for_pnp = false;
-  int min_matches_num =
-      6; //> DLT algorithm needs at least 6 points for pose estimation from
-         // 3D-2D point correspondences. (expected: 'count >= 6'), where
+
+  int min_ransac_feature_inliers =
+      10; //> DLT algorithm needs at least 6 points for pose estimation from
+  // 3D-2D point correspondences. (expected: 'count >= 6'), where
   double min_interframe_rotation_thre = 0.05;
   double min_interframe_translation_thre = 0.05;
   double max_interframe_rotation_thre = 1.57;
@@ -37,6 +41,7 @@ struct SLAMParams {
   int nearby_vertex_check_num = 0;
   int random_vertex_check_num = 0;
   std::string robust_kernel_name = "Cauchy";
+
   // Debugging params
   bool verbose = false;
   bool do_ba_backend = true;
@@ -90,7 +95,7 @@ std::optional<ORBFeatureDetectionResult>
 get_valid_orb_features(const SLAMParams &slam_params,
                        const KeyFrameData &current_keyframe) {
   auto orb_res = detect_orb_features(current_keyframe.image);
-  if (orb_res.keypoints.size() < slam_params.min_matches_num) {
+  if (orb_res.keypoints.size() < slam_params.min_ransac_feature_inliers) {
     std::cerr << "Not enough keypoints" << std::endl;
     return std::nullopt;
   }
@@ -167,7 +172,7 @@ front_end(const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
   // Step 6: Match features
   auto good_matches = find_matches_and_draw_them(
       previous_keyframe.orb_res, current_keyframe.orb_res, false);
-  if (good_matches.size() < slam_params.min_matches_num) {
+  if (good_matches.size() < slam_params.min_ransac_feature_inliers) {
     std::cerr << "Not enough feature matches" << std::endl;
     return std::nullopt;
   }

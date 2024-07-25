@@ -2,6 +2,7 @@
 #include "rgbd_slam_rico/rgbd_rico_slam_backend.hpp"
 #include "rgbd_slam_rico/rgbd_rico_slam_frontend.hpp"
 #include "simple_robotics_cpp_utils/io_utils.hpp"
+#include "simple_robotics_cpp_utils/loguru.hpp"
 
 using namespace RgbdSlamRico;
 constexpr auto PACKAGE_NAME = "rgbd_slam_rico";
@@ -10,7 +11,12 @@ constexpr auto DEPTH_TOPIC = "/camera/depth/image";
 constexpr auto CAMERA_INFO_TOPIC = "/camera/rgb/camera_info";
 
 SLAMParams read_params(ros::NodeHandle nh) {
+  int argc = 1; // argument count, the program's name itself
+  char *argv[] = {"this_test_program", NULL}; // argument vector
   SLAMParams slam_params;
+
+  nh.getParam("bag_name", slam_params.bag_name);
+
   nh.getParam("image_skip_batch_num", slam_params.image_skip_batch_num);
   nh.getParam("image_num", slam_params.image_num);
   nh.getParam("test_with_optimization", slam_params.test_with_optimization);
@@ -22,6 +28,8 @@ SLAMParams read_params(ros::NodeHandle nh) {
   nh.getParam("nearby_vertex_check_num", slam_params.nearby_vertex_check_num);
   nh.getParam("random_vertex_check_num", slam_params.random_vertex_check_num);
   nh.getParam("robust_kernel_name", slam_params.robust_kernel_name);
+  nh.getParam("min_ransac_feature_inliers",
+              slam_params.min_ransac_feature_inliers);
 
   nh.getParam("use_ransac_for_pnp", slam_params.use_ransac_for_pnp);
   nh.getParam("do_ba_backend", slam_params.do_ba_backend);
@@ -30,6 +38,7 @@ SLAMParams read_params(ros::NodeHandle nh) {
   nh.getParam("verbose", slam_params.verbose);
   nh.getParam("pause_after_optimization", slam_params.pause_after_optimization);
   nh.getParam("initial_image_skip_num", slam_params.initial_image_skip_num);
+  LOG_S(INFO) << "Done Reading Params";
   return slam_params;
 }
 
@@ -37,6 +46,8 @@ int main(int argc, char *argv[]) {
   // Step 1: set up ros node, and parameters
   ros::init(argc, argv, "rgbd_rico_slam_mini");
   ros::NodeHandle nh;
+  loguru::init(argc, argv);
+  LOG_SCOPE_FUNCTION(INFO);
   auto slam_params = read_params(nh);
 
   // Step 2: bagparser, topics and camera info
@@ -44,17 +55,14 @@ int main(int argc, char *argv[]) {
       nh.advertise<geometry_msgs::PoseArray>("optimized_poses", 1, true);
   ros::Publisher points_pub =
       nh.advertise<PointCloud>("optimized_points", 1, true);
-  SimpleRoboticsRosUtils::BagParser bp(nh, PACKAGE_NAME,
-                                       "/data/rgbd_dataset_freiburg1_xyz.bag");
+  SimpleRoboticsRosUtils::BagParser bp(nh, PACKAGE_NAME, slam_params.bag_name);
   bp.fast_forward(RGB_TOPIC, slam_params.initial_image_skip_num);
   bp.fast_forward(DEPTH_TOPIC, slam_params.initial_image_skip_num);
 
   // Step 3:using namespace RgbdSlamRico;using namespace RgbdSlamRico;
   // initialize data structures for optimization
   HandyCameraInfo cam_info = load_camera_info(bp, CAMERA_INFO_TOPIC);
-  PointCloud::Ptr point_cloud(new PointCloud);
-  point_cloud->header.frame_id = "camera";
-  point_cloud->height = point_cloud->width = 1;
+  PointCloud::Ptr point_cloud = initialize_point_cloud();
 
   std::vector<KeyFrameData> keyframes;
   keyframes.reserve(100);
@@ -121,15 +129,10 @@ int main(int argc, char *argv[]) {
 
   // Step 10: global BA optimization (backend)
   backend_optimize(keyframes);
-  point_cloud->clear();
-  // TODO
+  clear_pointcloud(point_cloud);
   std::cout << "Finished optimization. Adding point cloud now."
             << ros::Time::now() << std::endl;
-  for (unsigned int i = 0; i < keyframes.size(); ++i) {
-    auto &k = keyframes.at(i);
-    add_point_cloud(k.pose, k.image, k.depth_image, cam_info, point_cloud,
-                    slam_params);
-  }
+  add_point_cloud_multithreaded(keyframes, cam_info, point_cloud, slam_params);
   visualize_slam_results(keyframes, poses_pub, points_pub, point_cloud);
   std::cout << "Finished point cloud addition" << ros::Time::now() << std::endl;
 
