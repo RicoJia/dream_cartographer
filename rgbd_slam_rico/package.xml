@@ -32,8 +32,8 @@
   <exec_depend>pcl_ros</exec_depend>
   <build_depend>pcl_ros</build_depend>
   <exec_depend>pcl_ros</exec_depend>
-  <!-- <build_depend>image_transport</build_depend>
-  <exec_depend>image_transport</exec_depend> -->
+  <build_depend>image_transport</build_depend>
+  <exec_depend>image_transport</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

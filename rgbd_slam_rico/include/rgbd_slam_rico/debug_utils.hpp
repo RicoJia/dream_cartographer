@@ -7,6 +7,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseArray.h>
+#include <image_transport/image_transport.h>
 #include <memory>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/point_types.h>
@@ -205,38 +206,20 @@ void print_edges(const g2o::SparseOptimizer &optimizer) {
   }
 }
 
-// /**
-//  * @brief converts frame1 2d matches points -> frame 2 2d matches ->
-//  canonical -> 3d -> frame 1
-//  *
-//  * @param estimate
-//  * @param cam_info
-//  * @param cam1_2_cam2
-//  * @param depth2
-//  */
-// void debug_print_3d_points(const poseestimate3d &estimate, const
-// handycamerainfo &cam_info,
-//     eigen::isometry3d &cam1_2_cam2, const cv::mat &depth2){
+class ImagePub {
+public:
+  ImagePub(ros::NodeHandle nh, const std::string &topic) : it_(nh) {
+    pub_ = it_.advertise(topic, 1);
+  }
 
-//     std::vector<eigen::vector3d> frame1_points, frame2_points;
+  void publish(const cv::Mat &image) {
+    sensor_msgs::ImagePtr msg =
+        cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
+    pub_.publish(msg);
+  }
 
-//     for (unsigned int i = 0; i < estimate.object_frame_points.size(); ++i){
-//         const auto& point1 = estimate.object_frame_points.at(i);
-//         eigen::vector3d p1(point1.x, point1.y, point1.z);
-//         auto p1_trans = cam1_2_cam2 * p1;
-
-//         const auto& pixel2 = estimate.current_camera_pixels.at(i);
-//         auto p2_canonical = simpleroboticscpputils::pixel2cam(pixel2,
-//         cam_info.k);
-
-//         double depth = depth2.at<float>(int(pixel2.y), int(pixel2.x));
-//         //todo
-//         std::cout<<"depth2: "<<depth<<std::endl;
-//         std::cout<<"k: "<<cam_info.k<<std::endl;
-//         eigen::vector3d p2(p2_canonical.x * depth, p2_canonical.y * depth,
-//         depth); std::cout<<"p1: "<<p1_trans.format(eigen_1_line_fmt)<<"p2:
-//         "<<p2.format(eigen_1_line_fmt)<<std::endl;
-//     }
-// }
-
+private:
+  image_transport::ImageTransport it_;
+  image_transport::Publisher pub_;
+};
 }; // namespace RgbdSlamRico

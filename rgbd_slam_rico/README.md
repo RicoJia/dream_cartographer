@@ -41,6 +41,13 @@ Below image shows the final result after:
     <img src="https://github.com/user-attachments/assets/20988112-f742-41ee-9e2e-44e87d02be19" height="300" alt=""/>
 </a>
 
+Here is the result from more datasets: (Left: 'freiburg1_rpy')
+
+<p>
+    <img src="https://github.com/user-attachments/assets/e41b2b86-2468-4b03-b6eb-b6a97b3cc113" height="300" alt=""/>
+    <img src="https://github.com/user-attachments/assets/3c6bb9f1-4a48-44ed-9801-b540b51b4162" height="300" alt=""/>
+</p>
+
 ## Further Reading
 
 [I wrote a blog series about the theory and implementation of the VSLAM system that I built.](https://ricojia.github.io/2024/07/09/rgbd-slam-pnp.html)

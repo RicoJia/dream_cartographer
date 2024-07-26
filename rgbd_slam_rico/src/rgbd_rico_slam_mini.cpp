@@ -12,7 +12,7 @@ constexpr auto CAMERA_INFO_TOPIC = "/camera/rgb/camera_info";
 
 SLAMParams read_params(ros::NodeHandle nh) {
   int argc = 1; // argument count, the program's name itself
-  char *argv[] = {"this_test_program", NULL}; // argument vector
+  char *argv[] = {(char *)("this_test_program"), NULL}; // argument vector
   SLAMParams slam_params;
 
   nh.getParam("bag_name", slam_params.bag_name);
@@ -55,6 +55,8 @@ int main(int argc, char *argv[]) {
       nh.advertise<geometry_msgs::PoseArray>("optimized_poses", 1, true);
   ros::Publisher points_pub =
       nh.advertise<PointCloud>("optimized_points", 1, true);
+  auto image_pub = ImagePub(nh, RGB_TOPIC);
+
   SimpleRoboticsRosUtils::BagParser bp(nh, PACKAGE_NAME, slam_params.bag_name);
   bp.fast_forward(RGB_TOPIC, slam_params.initial_image_skip_num);
   bp.fast_forward(DEPTH_TOPIC, slam_params.initial_image_skip_num);
@@ -79,6 +81,12 @@ int main(int argc, char *argv[]) {
     KeyFrameData current_keyframe{load_next_image_TUM(bp, RGB_TOPIC, true),
                                   load_next_image_TUM(bp, DEPTH_TOPIC, false),
                                   Eigen::Isometry3d::Identity(), i};
+    if (current_keyframe.image.empty() ||
+        current_keyframe.depth_image.empty()) {
+      LOG_S(WARNING) << "At least one image topic is done. Exiting";
+      continue;
+    }
+    image_pub.publish(current_keyframe.image);
     // Step 5: detect ORB features
     auto orb_features = get_valid_orb_features(slam_params, current_keyframe);
     if (!orb_features.has_value())

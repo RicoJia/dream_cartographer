@@ -25,7 +25,7 @@ find_package(
              sensor_msgs
              geometry_msgs
              cv_bridge # cv bridge stuff
-             # image_transport # For pub & sub video / compressed images
+             image_transport # For pub & sub video / compressed images
              pcl_ros
              pcl_conversions)
 find_package(OpenCV REQUIRED)
@@ -40,36 +40,28 @@ set(SUITESPARSE_INCLUDE_DIR /usr/include/suitesparse)
 set(SUITESPARSE_LIBRARY_DIR /usr/lib/x86_64-linux-gnu)
 # Manually find the CSparse library
 find_path(CSPARSE_INCLUDE_DIR cs.h PATHS ${SUITESPARSE_INCLUDE_DIR})
-find_library(CSPARSE_LIBRARY NAMES cxsparse PATHS ${SUITESPARSE_LIBRARY_DIR})
+find_library(
+  CSPARSE_LIBRARY
+  NAMES cxsparse
+  PATHS ${SUITESPARSE_LIBRARY_DIR})
 if(NOT CSPARSE_INCLUDE_DIR OR NOT CSPARSE_LIBRARY)
-    message(FATAL_ERROR "CSparse library not found")
+  message(FATAL_ERROR "CSparse library not found")
 else()
-    message(NOTICE "Found cparse library")
+  message(NOTICE "Found cparse library")
 endif()
 
 include_directories(${CSPARSE_INCLUDE_DIR})
 include_directories(
-  ${catkin_INCLUDE_DIRS} 
-  ${rosbag_INCLUDE_DIRS} 
-  ${OpenCV_INCLUDE_DIRS}
-  ${SIMPLE_ROBOTICS_CPP_UTILS_DIR}/include 
-  ${G2O_INCLUDE_DIRS}
-  include)
+  ${catkin_INCLUDE_DIRS} ${rosbag_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS}
+  ${SIMPLE_ROBOTICS_CPP_UTILS_DIR}/include ${G2O_INCLUDE_DIRS} include)
 
-add_subdirectory(
-    ${SIMPLE_ROBOTICS_CPP_UTILS_DIR}
-    ${CMAKE_BINARY_DIR}/simple_robotics_cpp_utils
-)
+add_subdirectory(${SIMPLE_ROBOTICS_CPP_UTILS_DIR}
+                 ${CMAKE_BINARY_DIR}/simple_robotics_cpp_utils)
 add_library(${PROJECT_NAME}_dependencies INTERFACE)
-target_link_libraries(${PROJECT_NAME}_dependencies
-  INTERFACE 
-  ${catkin_LIBRARIES} 
-  ${rosbag_LIBRARIES}
-  ${OpenCV_LIBRARIES}
-  simple_robotics_cpp_utils 
-  Eigen3::Eigen
-  ${CSPARSE_LIBRARY}
-)
+target_link_libraries(
+  ${PROJECT_NAME}_dependencies
+  INTERFACE ${catkin_LIBRARIES} ${rosbag_LIBRARIES} ${OpenCV_LIBRARIES}
+            simple_robotics_cpp_utils Eigen3::Eigen ${CSPARSE_LIBRARY})
 
 add_executable(orb_test src/orb_test.cpp)
 target_link_libraries(orb_test ${PROJECT_NAME}_dependencies)
@@ -85,8 +77,7 @@ target_link_libraries(
   g2o::types_slam3d
   g2o::solver_eigen
   g2o::types_sba
-  g2o::csparse_extension
-)
+  g2o::csparse_extension)
 
 add_executable(p3p_demo src/p3p_demo.cpp)
 target_link_libraries(p3p_demo ${PROJECT_NAME}_dependencies)

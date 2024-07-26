@@ -29,7 +29,14 @@ struct HandyCameraInfo {
   cv::Mat K;
 };
 
-// TODO: this is NOT safe, because the message could go out of scope??
+/**
+ * @brief Return the next image / depth image from the TUM data set
+ *
+ * @param bp : Bag Parser
+ * @param image_topic_name : topic
+ * @param is_rgb_image : choose false if it's a depth image
+ * @return cv::Mat : image. (Or empty cv::Mat if this is not valid)
+ */
 inline cv::Mat load_next_image_TUM(SimpleRoboticsRosUtils::BagParser &bp,
                                    const std::string &image_topic_name,
                                    const bool &is_rgb_image) {
@@ -40,6 +47,8 @@ inline cv::Mat load_next_image_TUM(SimpleRoboticsRosUtils::BagParser &bp,
   // value of 1 in the depth image corresponds to a distance of 1 meter from the
   // camera
   auto msg = bp.next<sensor_msgs::Image>(image_topic_name);
+  if (msg == nullptr)
+    return cv::Mat();
   cv_bridge::CvImageConstPtr cv_ptr;
   if (is_rgb_image)
     cv_ptr = cv_bridge::toCvShare(msg, enc::BGR8);
