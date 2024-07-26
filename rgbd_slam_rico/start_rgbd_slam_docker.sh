@@ -2,12 +2,22 @@
 # if [[ "$EUID" -ne 0 ]]; then echo "Please run this script as sudo" ; exit 1; fi
 # this is hardcoded mounted volume, 
 xhost +local:root
-if [[ -f "data/rgbd_dataset_freiburg1_xyz.bag" ]]; then 
-    echo "No need to download dataset rgbd_dataset_freiburg1_xyz.bag..."
-else
-    echo "Downloading dataset rgbd_dataset_freiburg1_xyz.bag..."
-    wget -P data https://cvg.cit.tum.de/rgbd/dataset/freiburg1/rgbd_dataset_freiburg1_xyz.bag
-fi
+
+declare -A bags_link_lookup #?
+bags_link_lookup["data/rgbd_dataset_freiburg1_xyz.bag"]="https://cvg.cit.tum.de/rgbd/dataset/freiburg1/rgbd_dataset_freiburg1_xyz.bag"
+bags_link_lookup["data/rgbd_dataset_freiburg1_rpy.bag"]="https://cvg.cit.tum.de/rgbd/dataset/freiburg1/rgbd_dataset_freiburg1_rpy.bag"
+
+echo "Download bag files if they are missing ..."
+for key in "${!bags_link_lookup[@]}"; do
+    if [[ -f "${key}" ]]; then 
+        echo "No need to download dataset ${key}..."
+    else
+        echo "Downloading dataset ${key}"
+        wget -P data "${bags_link_lookup[$key]}"
+    fi
+done
+echo "Done Downloading"
+
 SIMPLE_ROBOTICS_UTILS_DIR="/home/$USER/file_exchange_port/The-Dream-Robot/src/SimpleRoboticsUtils"
 sudo docker run --name my_ros_container --rm -e DISPLAY=$DISPLAY \
     -v /etc/passwd:/etc/passwd:ro \
@@ -20,4 +30,3 @@ sudo docker run --name my_ros_container --rm -e DISPLAY=$DISPLAY \
     -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_cpp_utils:/home/${USER}/dream_cartographer_ws/src/simple_robotics_cpp_utils \
     --user $(id -u):$(id -g) -e XAUTHORITY=/root/.Xauthority \
     --dns 8.8.8.8 --dns 8.8.4.4 -it --network="host" --privileged dream-rgbd-rico
-    
