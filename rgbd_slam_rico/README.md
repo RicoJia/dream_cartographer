@@ -19,8 +19,6 @@ roslaunch rgbd_slam_rico rgbd_slam_rico.launch
 
 [I wrote a blog series about the theory and implementation of this VSLAM system](https://ricojia.github.io/2024/07/09/rgbd-slam-pnp.html)
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/jCsX9R2aa-I?si=zNrWzvuiAqA9dbmY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-
 ## Benchmarking
 
 The benchmarking dataset comes from the [TUM dataset](https://cvg.cit.tum.de/data/datasets/rgbd-dataset). 
