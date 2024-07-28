@@ -19,6 +19,8 @@ roslaunch rgbd_slam_rico rgbd_slam_rico.launch
 
 [I wrote a blog series about the theory and implementation of this VSLAM system](https://ricojia.github.io/2024/07/09/rgbd-slam-pnp.html)
 
+<iframe width="560" height="315" src="https://www.youtube.com/embed/jCsX9R2aa-I?si=zNrWzvuiAqA9dbmY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
 ## Benchmarking
 
 The benchmarking dataset comes from the [TUM dataset](https://cvg.cit.tum.de/data/datasets/rgbd-dataset). 
@@ -38,8 +40,6 @@ Below image shows the final result after:
 1. Rough frame-to-frame estimates are given by the front end (`cv::solvePnPRansac` based)
 2. Pose Graph bundle adjustment gets performed by `g2o`.
 3. Downsample the resultant point cloud into a coarser voxel grid
-
-**Click on the image to see a video demo**
 
 <a href="https://youtu.be/jCsX9R2aa-I?si=R_DvmD0d8iOKy40Q">
     <img src="https://github.com/user-attachments/assets/20988112-f742-41ee-9e2e-44e87d02be19" height="300" alt=""/>
