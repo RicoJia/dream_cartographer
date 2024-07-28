@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
     if (current_keyframe.image.empty() ||
         current_keyframe.depth_image.empty()) {
       LOG_S(WARNING) << "At least one image topic is done. Exiting";
-      continue;
+      break;
     }
     image_pub.publish(current_keyframe.image);
     // Step 5: detect ORB features
