@@ -5,10 +5,6 @@
 #include "simple_robotics_cpp_utils/loguru.hpp"
 
 using namespace RgbdSlamRico;
-constexpr auto PACKAGE_NAME = "rgbd_slam_rico";
-constexpr auto RGB_TOPIC = "/camera/rgb/image_color";
-constexpr auto DEPTH_TOPIC = "/camera/depth/image";
-constexpr auto CAMERA_INFO_TOPIC = "/camera/rgb/camera_info";
 
 SLAMParams read_params(ros::NodeHandle nh) {
   int argc = 1; // argument count, the program's name itself
@@ -36,8 +32,11 @@ SLAMParams read_params(ros::NodeHandle nh) {
   nh.getParam("min_depth", slam_params.min_depth);
   nh.getParam("max_depth", slam_params.max_depth);
   nh.getParam("verbose", slam_params.verbose);
+  nh.getParam("visualize_frames", slam_params.visualize_frames);
   nh.getParam("pause_after_optimization", slam_params.pause_after_optimization);
   nh.getParam("initial_image_skip_num", slam_params.initial_image_skip_num);
+  nh.getParam("save_pcd_file", slam_params.save_pcd_file);
+
   LOG_S(INFO) << "Done Reading Params";
   return slam_params;
 }
@@ -91,9 +90,11 @@ int main(int argc, char *argv[]) {
     auto orb_features = get_valid_orb_features(slam_params, current_keyframe);
     if (!orb_features.has_value())
       continue;
-    current_keyframe.orb_res = orb_features.value();
-    filter_orb_result_with_valid_depths(current_keyframe.depth_image,
-                                        slam_params, current_keyframe.orb_res);
+    current_keyframe.orb_res = std::move(orb_features.value());
+    if (!filter_orb_result_with_valid_depths(current_keyframe.depth_image,
+                                             slam_params,
+                                             current_keyframe.orb_res))
+      continue;
     // Step 6: Initialize
     if (keyframes.empty()) {
       initialize_global_optimizer(slam_params.verbose, current_keyframe);
@@ -138,11 +139,14 @@ int main(int argc, char *argv[]) {
   // Step 10: global BA optimization (backend)
   backend_optimize(keyframes);
   clear_pointcloud(point_cloud);
-  std::cout << "Finished optimization. Adding point cloud now."
+  std::cout << "Finished optimization. Adding point cloud now..."
             << ros::Time::now() << std::endl;
   add_point_cloud_multithreaded(keyframes, cam_info, point_cloud, slam_params);
   visualize_slam_results(keyframes, poses_pub, points_pub, point_cloud);
   std::cout << "Finished point cloud addition" << ros::Time::now() << std::endl;
+  if (slam_params.save_pcd_file) {
+    save_point_cloud_to_pcd(*point_cloud);
+  }
 
   ros::spin();
 

@@ -1,4 +1,6 @@
-bag_name: "/data/rgbd_dataset_freiburg1_xyz.bag"
+bag_name: "/data/aura32_lobby4.bag"
+# bag_name: "/data/rgbd_dataset_freiburg1_xyz.bag"
+
 # bag_name: "/data/rgbd_dataset_freiburg3_long_office_household.bag"  #too static, ok
 # bag_name: "/data/rgbd_dataset_freiburg1_rpy.bag"  # too static, ok
 # bag_name: "/data/rgbd_dataset_freiburg1_desk2.bag"  # barely ok
@@ -8,8 +10,8 @@ bag_name: "/data/rgbd_dataset_freiburg1_xyz.bag"
 # bag_name: "/data/rgbd_dataset_freiburg3_walking_xyz_validation.bag"  
 
 initial_image_skip_num: 0 #119
-image_skip_batch_num: 0
-image_num: 90
+image_skip_batch_num: 3
+image_num: 400
 test_with_optimization: true
 pnp_method: "p3p"
 downsample_point_cloud: true
@@ -19,17 +21,20 @@ do_ba_backend: true #not effective
 min_depth: 0.2
 max_depth: 11.0
 min_ransac_feature_inliers: 10
-min_interframe_rotation_thre: 0.01 #5.72
-min_interframe_translation_thre: 0.01
+min_interframe_rotation_thre: 0.1 #5.72
+min_interframe_translation_thre: 0.1
 max_interframe_rotation_thre: 1.04 #60 deg
 max_interframe_translation_thre: 1.0
 # Optimization Params
-nearby_vertex_check_num: 20
-random_vertex_check_num: 100
+nearby_vertex_check_num: 40
+random_vertex_check_num: 200
 # "Cauchy", "Huber"
 robust_kernel_name: "Cauchy"
 
 # Debugging Params
 verbose: false
-pause_after_optimization: true
-voxel_size: 0.014
+# THIS IS BUGGY (TODO in orb feature detection)
+visualize_frames: false
+pause_after_optimization: false
+voxel_size: 0.03
+save_pcd_file: true

@@ -18,8 +18,11 @@ for key in "${!bags_link_lookup[@]}"; do
 done
 echo "Done Downloading"
 
+# IMAGE_NAME=junior-project-rico
+IMAGE_NAME=dream-rgbd-rico
+
 SIMPLE_ROBOTICS_UTILS_DIR="/home/$USER/file_exchange_port/The-Dream-Robot/src/SimpleRoboticsUtils"
-sudo docker run --name my_ros_container --rm -e DISPLAY=$DISPLAY \
+sudo docker run --name ${IMAGE_NAME}-container --rm -e DISPLAY=$DISPLAY \
     -v /etc/passwd:/etc/passwd:ro \
     -v /etc/group:/etc/group:ro \
     -v /tmp/.X11-unix:/tmp/.X11-unix:ro \
@@ -28,5 +31,8 @@ sudo docker run --name my_ros_container --rm -e DISPLAY=$DISPLAY \
     -v ~/.ssh:/root/.ssh \
     -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_ros_utils:/home/${USER}/dream_cartographer_ws/src/simple_robotics_ros_utils \
     -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_cpp_utils:/home/${USER}/dream_cartographer_ws/src/simple_robotics_cpp_utils \
+    -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_common_udev_rules:/etc/udev/rules.d \
+    -v /dev/bus/usb:/dev/bus/usb \
+    -v /home/${USER}/.ros:/home/rico/.ros/ \
     --user $(id -u):$(id -g) -e XAUTHORITY=/root/.Xauthority \
-    --dns 8.8.8.8 --dns 8.8.4.4 -it --network="host" --privileged dream-rgbd-rico
+    --dns 8.8.8.8 --dns 8.8.4.4 -it --network="host" --privileged ${IMAGE_NAME}

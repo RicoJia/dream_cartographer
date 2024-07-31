@@ -1,5 +1,7 @@
-# docker build --build-arg USER_ID=$(id -u) --build-arg USER_NAME=$(whoami) --build-arg GROUP_ID=$(id -g) -t dream-rgbd-rico .
+# DOCKER_BUILDKIT=1 docker build --build-arg USER_ID=$(id -u) --build-arg USER_NAME=$(whoami) --build-arg GROUP_ID=$(id -g) -t dream-rgbd-rico .
 # sudo docker run --name my_ros_container --rm -e DISPLAY=$DISPLAY -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro --user $(id -u):$(id -g) -v /tmp/.X11-unix:/tmp/.X11-unix:ro -v $HOME/.Xauthority:/root/.Xauthority -e XAUTHORITY=/root/.Xauthority -v /home/${USER_NAME}/file_exchange_port/dream_cartographer_ws:/home/${USER_NAME}/dream_cartographer_ws -v ~/.ssh:/root/.ssh --dns 8.8.8.8 --dns 8.8.4.4 -it --network="host" --privileged dream-rgbd-rico
+
+# This base image may/may not play well with pyrealsense through pip install
 
 FROM ros:noetic-perception
 # install rtabmap packages
@@ -54,6 +56,37 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get update && apt-get install -y \
     gdb \
     libsuitesparse-dev
+
+# RUN apt-get update && apt-get install -y \
+#     libusb-1.0-0-dev \
+#     libglfw3-dev \
+#     libssl-dev \
+#     libcurl4-openssl-dev \
+#     libudev-dev \
+#     pkg-config \
+#     && rm -rf /var/lib/apt/lists/*
+
+# # Add the Intel RealSense repository and its key
+# RUN apt-key adv --keyserver keys.gnupg.net --recv-key C8B3A55A6F3EFCDE \
+#     && add-apt-repository 'deb http://realsense-hw-public.s3.amazonaws.com/Debian/apt-repo bionic main' -u
+
+# # Install librealsense2 library
+# RUN apt-get update && apt-get install -y \
+#     librealsense2-dkms \
+#     librealsense2-utils \
+#     librealsense2-dev \
+#     librealsense2-dbg \
+#     && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install open3d
+
+# usbutils is for lsusb
+RUN apt-get update \
+ && apt-get install -y \
+    ros-noetic-librealsense2* \
+    ros-noetic-realsense2-* \
+    usbutils \
+ && rm -rf /var/lib/apt/lists/*
 
 ENV CCACHE_DIR=/ccache
 ENV CC="ccache gcc"

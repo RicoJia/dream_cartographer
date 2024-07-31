@@ -44,6 +44,7 @@ struct SLAMParams {
 
   // Debugging params
   bool verbose = false;
+  bool visualize_frames = false;
   bool do_ba_backend = true;
   bool pause_after_optimization = false;
   int initial_image_skip_num = 0;
@@ -51,6 +52,8 @@ struct SLAMParams {
   int image_num = 1;
   bool test_with_optimization = true;
   int pnp_method_enum = 0;
+
+  bool save_pcd_file = false;
 };
 
 struct FrontEndData {
@@ -96,17 +99,27 @@ get_valid_orb_features(const SLAMParams &slam_params,
                        const KeyFrameData &current_keyframe) {
   auto orb_res = detect_orb_features(current_keyframe.image);
   if (orb_res.keypoints.size() < slam_params.min_ransac_feature_inliers) {
-    std::cerr << "Not enough keypoints" << std::endl;
+    std::cerr << "Not enough keypoints. Detected features: "
+              << orb_res.keypoints.size() << std::endl;
     return std::nullopt;
   }
   return orb_res;
 }
 
 /**
+ * @brief
+ */
+
+/**
  * @brief filter out orb results with invalid depths IN PLACE, i.e., depth
  * outside of [min_threshold, max_threshold]
+ *
+ * @param depth_img : depth images
+ * @param slam_params : slam params
+ * @param res : feature detecion result
+ * @return true if there are results with valid depths. Otherwise false
  */
-void filter_orb_result_with_valid_depths(const cv::Mat &depth_img,
+bool filter_orb_result_with_valid_depths(const cv::Mat &depth_img,
                                          const SLAMParams &slam_params,
                                          ORBFeatureDetectionResult &res) {
   std::vector<cv::KeyPoint> keypoints;
@@ -121,8 +134,16 @@ void filter_orb_result_with_valid_depths(const cv::Mat &depth_img,
       descriptor.push_back(res.descriptor.row(static_cast<int>(i)));
     }
   }
+
+  if (keypoints.size() < slam_params.min_ransac_feature_inliers) {
+    std::cerr << "Not enough features left after depth filtering. Number of "
+                 "features left: "
+              << keypoints.size() << std::endl;
+    return false;
+  }
   res.keypoints = std::move(keypoints);
   res.descriptor = std::move(descriptor);
+  return true;
 }
 
 /**
@@ -170,10 +191,12 @@ front_end(const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
           const KeyFrameData &previous_keyframe,
           const KeyFrameData &current_keyframe) {
   // Step 6: Match features
-  auto good_matches = find_matches_and_draw_them(
-      previous_keyframe.orb_res, current_keyframe.orb_res, false);
+  auto good_matches = find_matches_and_draw_them(previous_keyframe.orb_res,
+                                                 current_keyframe.orb_res,
+                                                 slam_params.visualize_frames);
   if (good_matches.size() < slam_params.min_ransac_feature_inliers) {
-    std::cerr << "Not enough feature matches" << std::endl;
+    std::cerr << "Not enough feature matches. Detected matches: "
+              << good_matches.size() << std::endl;
     return std::nullopt;
   }
   // Step 1 - PnP front end
