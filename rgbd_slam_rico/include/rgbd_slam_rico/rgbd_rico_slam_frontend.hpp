@@ -107,10 +107,6 @@ get_valid_orb_features(const SLAMParams &slam_params,
 }
 
 /**
- * @brief
- */
-
-/**
  * @brief filter out orb results with invalid depths IN PLACE, i.e., depth
  * outside of [min_threshold, max_threshold]
  *

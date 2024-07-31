@@ -12,8 +12,7 @@ import time
 class ImageRecorder:
     def __init__(self):
         self.bridge = CvBridge()
-#     input_bag = "../data/aura32_lobby1_2024-07-30-19-22-34.bag"  # Replace with your input bag file path
-        output_bag = "../data/aura32_lobby4.bag"  # Replace with your desired output bag file path
+        output_bag = "../data/aura32_lobby4.bag" 
         self.bag = rosbag.Bag(output_bag, 'w')
         self.lock = Lock()
         self.shutdown_flag = False 
@@ -37,12 +36,6 @@ class ImageRecorder:
                 with self.lock:
                     self.bag.write("/camera/depth/image", depth_msg)
 
-                # # Display the depth image
-                # depth_display = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX)
-                # depth_display = cv2.convertScaleAbs(depth_display)
-                # depth_display = cv2.applyColorMap(depth_display, cv2.COLORMAP_JET)
-                # cv2.imshow("Aligned Depth Image in Meters", depth_display)
-                # cv2.waitKey(1)
             except Exception as e:
                 rospy.logerr("CvBridge Error: {0}".format(e))
 
@@ -53,12 +46,6 @@ class ImageRecorder:
                 with self.lock:
                     self.bag.write("/camera/rgb/image_color", data)
 
-                # # Convert the RGB image to OpenCV format
-                # rgb_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-
-                # # Display the RGB image
-                # cv2.imshow("RGB Image", rgb_image)
-                # cv2.waitKey(1)
             except Exception as e:
                 rospy.logerr("CvBridge Error: {0}".format(e))
 
