@@ -57,27 +57,6 @@ RUN apt-get update && apt-get install -y \
     gdb \
     libsuitesparse-dev
 
-# RUN apt-get update && apt-get install -y \
-#     libusb-1.0-0-dev \
-#     libglfw3-dev \
-#     libssl-dev \
-#     libcurl4-openssl-dev \
-#     libudev-dev \
-#     pkg-config \
-#     && rm -rf /var/lib/apt/lists/*
-
-# # Add the Intel RealSense repository and its key
-# RUN apt-key adv --keyserver keys.gnupg.net --recv-key C8B3A55A6F3EFCDE \
-#     && add-apt-repository 'deb http://realsense-hw-public.s3.amazonaws.com/Debian/apt-repo bionic main' -u
-
-# # Install librealsense2 library
-# RUN apt-get update && apt-get install -y \
-#     librealsense2-dkms \
-#     librealsense2-utils \
-#     librealsense2-dev \
-#     librealsense2-dbg \
-#     && rm -rf /var/lib/apt/lists/*
-
 RUN pip3 install open3d
 
 # usbutils is for lsusb
@@ -94,16 +73,6 @@ ENV CXX="ccache g++"
 ENV PATH="/usr/lib/ccache:$PATH"
 # Create the ccache directory with appropriate permissions
 RUN mkdir -p $CCACHE_DIR && chmod -R 777 $CCACHE_DIR
-# # Clone the g2o repository
-# RUN git clone https://github.com/RainerKuemmerle/g2o.git
-
-# # Build g2o
-# RUN cd g2o && \
-#     mkdir build && \
-#     cd build && \
-#     cmake .. && \
-#     make -j4 && \
-#     make install
 
 # Create a user to match the host's UID/GID and create necessary directories
 # Ros needs to access /home/${USER_NAME}/.ros/ So we need to set up the permission properly there. 
