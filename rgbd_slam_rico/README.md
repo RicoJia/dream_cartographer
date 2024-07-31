@@ -21,7 +21,12 @@ roslaunch rgbd_slam_rico rgbd_slam_rico.launch
 python3 scripts/visualize_pointcloud_open3d.py
 ```
 
-- Rviz is not being used because it's less CPU-friendly and crashes often. 
+- Rviz is not being used because it's less CPU-friendly and crashes often.
+
+5. There's a script for recording rosbags. 
+
+- `roslaunch realsense2_camera rs_camera.launch align_depth:=true`. It listens to the topic there
+- `python3 scripts/record_realsense_topics_in_bag.py`
 
 ## Implementation Notes
 
