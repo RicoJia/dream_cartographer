@@ -15,14 +15,27 @@ source devel/setup.bash
 roslaunch rgbd_slam_rico rgbd_slam_rico.launch 
 ```
 
+4. By default, this program saves the resulting in `data/rgbd_rico_slam_output.pcd`. To visualize, one can:
+
+```bash
+python3 scripts/visualize_pointcloud_open3d.py
+```
+
+- Rviz is not being used because it's less CPU-friendly and crashes often.
+
+5. There's a script for recording rosbags. 
+
+- `roslaunch realsense2_camera rs_camera.launch align_depth:=true`. It listens to the topic there
+- `python3 scripts/record_realsense_topics_in_bag.py`
+
 ## Implementation Notes
 
 [I wrote a blog series about the theory and implementation of this VSLAM system](https://ricojia.github.io/2024/07/09/rgbd-slam-pnp.html)
 
 ## Benchmarking
 
-The benchmarking dataset comes from the [TUM dataset](https://cvg.cit.tum.de/data/datasets/rgbd-dataset). 
-According to the [download page](https://cvg.cit.tum.de/data/datasets/rgbd-dataset/download), I'm using an xyz dataset. The true trajectory is also provided (It's a TODO for now)
+The benchmarking dataset comes from the [TUM dataset](https://cvg.cit.tum.de/data/datasets/rgbd-dataset).
+According to the [download page](https://cvg.cit.tum.de/data/datasets/rgbd-dataset/download). The true trajectory is also provided (It's a TODO for now)
 
 ## Results
 

@@ -101,6 +101,7 @@ find_matches_and_draw_them(const ORBFeatureDetectionResult &res1,
       good_matches.emplace_back(knn_match_pair[0]);
   }
   if (draw_matches) {
+    // TODO tech-debt: This implementation could be faulty
     cv::Mat image_with_matches;
     cv::drawKeypoints(res1.image, res1.keypoints, res1.image_with_keypoints,
                       cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);

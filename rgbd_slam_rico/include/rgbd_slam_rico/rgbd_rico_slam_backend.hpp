@@ -1,4 +1,5 @@
 #pragma once
+#include "rgbd_slam_rico/constants.hpp"
 #include "rgbd_slam_rico/debug_utils.hpp"
 #include "rgbd_slam_rico/orb_feature_detection.hpp"
 #include "rgbd_slam_rico/rgbd_rico_slam_frontend.hpp"
@@ -21,12 +22,6 @@
 #include <pcl/point_types.h>
 #include <pcl_ros/point_cloud.h>
 
-typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
-// 6 is the dimension of poses, 3 is the dimension of landmarks
-typedef g2o::BlockSolver_6_3 SlamBlockSolver;
-typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType>
-    SlamLinearSolver;
-
 /**
  * Intro to g2o optimization
  * SparseOptimizer is the graph, which contains multiple edges and vertices. It
@@ -38,6 +33,10 @@ typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType>
  */
 
 namespace RgbdSlamRico {
+// 6 is the dimension of poses, 3 is the dimension of landmarks
+typedef g2o::BlockSolver_6_3 SlamBlockSolver;
+typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType>
+    SlamLinearSolver;
 g2o::SparseOptimizer global_optimizer;
 
 enum class EdgeAdditionMode { NEARBY, RANDOM };

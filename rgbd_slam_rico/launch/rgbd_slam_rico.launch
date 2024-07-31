@@ -4,6 +4,6 @@
         <!-- This doesn't do anything, paste below to the end of the node tag -->
         <param name="launch-prefix" value="xterm -e gdb --args" />
     </node>
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rgbd_slam_rico)/rviz/rgbd_rico_slam.rviz" />
+    <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rgbd_slam_rico)/rviz/rgbd_rico_slam.rviz" /> -->
      <node pkg="tf2_ros" type="static_transform_publisher" name="static_transform_publisher" args="0 0 0 0 0 -1.5708 map camera"/> 
 </launch>

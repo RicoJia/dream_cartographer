@@ -1,8 +1,8 @@
 #pragma once
+#include "rgbd_slam_rico/constants.hpp"
 #include "rgbd_slam_rico/orb_feature_detection.hpp"
 #include "rgbd_slam_rico/rgbd_rico_slam_frontend.hpp"
 #include "simple_robotics_cpp_utils/io_utils.hpp"
-#include "simple_robotics_cpp_utils/thread_pool.hpp"
 #include <Eigen/Geometry>
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/Pose.h>
@@ -16,17 +16,11 @@
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 
-// Define the IO format to print on one line
-Eigen::IOFormat eigen_1_line_fmt(Eigen::StreamPrecision, Eigen::DontAlignCols,
-                                 ", ", ", ", "", "", " [", "] ");
-typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 namespace RgbdSlamRico {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Point Cloud Utils
 /////////////////////////////////////////////////////////////////////////////////////////////////
-ThreadPool thread_pool(std::thread::hardware_concurrency() /
-                       2); // using half of hardware cores
 
 PointCloud::Ptr initialize_point_cloud() {
   PointCloud::Ptr point_cloud(new PointCloud);
@@ -123,7 +117,7 @@ void add_point_cloud_multithreaded(const std::vector<KeyFrameData> &keyframes,
   std::vector<std::future<PointCloud::Ptr>> futures;
   for (unsigned int i = 0; i < keyframes.size(); ++i) {
     auto &k = keyframes.at(i);
-    futures.push_back(thread_pool.enqueue([&] {
+    futures.push_back(point_cloud_addition_thread_pool.enqueue([&] {
       return process_current_pointcloud(k.pose, k.image, k.depth_image,
                                         cam_info, slam_params);
     }));
@@ -204,6 +198,11 @@ void print_edges(const g2o::SparseOptimizer &optimizer) {
     std::cout << std::endl;
     // Add more details as needed
   }
+}
+
+void save_point_cloud_to_pcd(PointCloud cloud) {
+  pcl::io::savePCDFileASCII(PCD_FILE_NAME, cloud);
+  std::cout << "Finished Saving pointcloud to " << PCD_FILE_NAME << std::endl;
 }
 
 class ImagePub {
