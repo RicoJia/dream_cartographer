@@ -30,8 +30,7 @@ int main(int argc, char **argv) {
     // TODO
     // display_image(orb_res.image_with_keypoints);
     if (!last_orb_result.is_null()) {
-      auto good_matches =
-          find_matches_and_draw_them(last_orb_result, orb_res, true);
+      auto good_matches = find_matches(last_orb_result, orb_res);
 
       // Part 2 SLAM Front end with 2D-2D Methods
       pose_estimate_2d2d(last_orb_result, orb_res, good_matches, cam_info.K);

@@ -15,11 +15,8 @@ struct ORBFeatureDetectionResult {
   // keypoints.pt are stored as float values for subpixel accuracy.
   std::vector<cv::KeyPoint> keypoints;
   cv::Mat descriptor;
-  cv::Mat image_with_keypoints;
   cv::Mat image;
-  bool is_null() const {
-    return descriptor.empty() && image.empty() && image_with_keypoints.empty();
-  }
+  bool is_null() const { return descriptor.empty() && image.empty(); }
 };
 
 /*
@@ -83,9 +80,8 @@ inline ORBFeatureDetectionResult detect_orb_features(const cv::Mat &image) {
 }
 
 inline std::vector<cv::DMatch>
-find_matches_and_draw_them(const ORBFeatureDetectionResult &res1,
-                           const ORBFeatureDetectionResult &res2,
-                           const bool &draw_matches) {
+find_matches(const ORBFeatureDetectionResult &res1,
+             const ORBFeatureDetectionResult &res2) {
   cv::BFMatcher matcher;
 
   // Not using cv::DescriptorMatcher::FLANNBASED because we are doing binary
@@ -99,19 +95,6 @@ find_matches_and_draw_them(const ORBFeatureDetectionResult &res1,
   for (const auto &knn_match_pair : knn_matches) {
     if (knn_match_pair[0].distance < lowe_ratio * knn_match_pair[1].distance)
       good_matches.emplace_back(knn_match_pair[0]);
-  }
-  if (draw_matches) {
-    // TODO tech-debt: This implementation could be faulty
-    cv::Mat image_with_matches;
-    cv::drawKeypoints(res1.image, res1.keypoints, res1.image_with_keypoints,
-                      cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
-    cv::drawKeypoints(res2.image, res2.keypoints, res2.image_with_keypoints,
-                      cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
-    drawMatches(res1.image, res1.keypoints, res2.image, res2.keypoints,
-                good_matches, image_with_matches, cv::Scalar::all(-1),
-                cv::Scalar::all(-1), std::vector<char>(),
-                cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-    SimpleRoboticsCppUtils::display_image(image_with_matches);
   }
   return good_matches;
 }

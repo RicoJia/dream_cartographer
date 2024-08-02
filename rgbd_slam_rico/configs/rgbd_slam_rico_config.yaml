@@ -33,8 +33,7 @@ robust_kernel_name: "Cauchy"
 
 # Debugging Params
 verbose: false
-# THIS IS BUGGY (TODO in orb feature detection)
-visualize_frames: false
+visualize_frames: True
 pause_after_optimization: false
 voxel_size: 0.03
 save_pcd_file: true

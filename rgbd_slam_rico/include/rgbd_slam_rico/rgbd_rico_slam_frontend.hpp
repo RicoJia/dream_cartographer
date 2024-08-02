@@ -1,4 +1,6 @@
 #pragma once
+#include "rgbd_slam_rico/constants.hpp"
+#include "rgbd_slam_rico/debug_utils.hpp"
 #include "rgbd_slam_rico/orb_feature_detection.hpp"
 #include "simple_robotics_cpp_utils/cv_utils.hpp"
 #include "simple_robotics_cpp_utils/io_utils.hpp"
@@ -6,70 +8,10 @@
 #include <numeric>
 #include <opencv2/calib3d.hpp>
 
-#include <g2o/core/block_solver.h>
-#include <g2o/core/optimization_algorithm_levenberg.h>
-#include <g2o/core/sparse_optimizer.h>
-#include <g2o/solvers/dense/linear_solver_dense.h>
-#include <g2o/types/sba/types_sba.h>
-#include <g2o/types/sba/types_six_dof_expmap.h>
-#include <g2o/types/slam3d/types_slam3d.h>
-
 #include <pcl/point_types.h>
 #include <pcl_ros/point_cloud.h>
 
 namespace RgbdSlamRico {
-
-/************************************** Data Structures
- * **************************************/
-struct SLAMParams {
-  // Data params
-  std::string bag_name = "";
-
-  double max_depth = 20.0;
-  double min_depth = 0.3;
-  bool use_ransac_for_pnp = false;
-
-  int min_ransac_feature_inliers =
-      10; //> DLT algorithm needs at least 6 points for pose estimation from
-  // 3D-2D point correspondences. (expected: 'count >= 6'), where
-  double min_interframe_rotation_thre = 0.05;
-  double min_interframe_translation_thre = 0.05;
-  double max_interframe_rotation_thre = 1.57;
-  double max_interframe_translation_thre = 1.0;
-  bool downsample_point_cloud = false;
-  float voxel_size = 0.01;
-  int nearby_vertex_check_num = 0;
-  int random_vertex_check_num = 0;
-  std::string robust_kernel_name = "Cauchy";
-
-  // Debugging params
-  bool verbose = false;
-  bool visualize_frames = false;
-  bool do_ba_backend = true;
-  bool pause_after_optimization = false;
-  int initial_image_skip_num = 0;
-  int image_skip_batch_num = 0;
-  int image_num = 1;
-  bool test_with_optimization = true;
-  int pnp_method_enum = 0;
-
-  bool save_pcd_file = false;
-};
-
-struct FrontEndData {
-  cv::Mat image;
-  cv::Mat depth_image;
-  std::vector<cv::Point3f> object_frame_points;
-  std::vector<cv::Point2f> current_camera_pixels;
-};
-
-struct KeyFrameData {
-  cv::Mat image;
-  cv::Mat depth_image;
-  Eigen::Isometry3d pose;
-  unsigned int index;
-  ORBFeatureDetectionResult orb_res;
-};
 
 ///////////////////////////////////////////////////////////////////////////
 // Version 2.0
@@ -187,9 +129,8 @@ front_end(const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
           const KeyFrameData &previous_keyframe,
           const KeyFrameData &current_keyframe) {
   // Step 6: Match features
-  auto good_matches = find_matches_and_draw_them(previous_keyframe.orb_res,
-                                                 current_keyframe.orb_res,
-                                                 slam_params.visualize_frames);
+  auto good_matches =
+      find_matches(previous_keyframe.orb_res, current_keyframe.orb_res);
   if (good_matches.size() < slam_params.min_ransac_feature_inliers) {
     std::cerr << "Not enough feature matches. Detected matches: "
               << good_matches.size() << std::endl;
@@ -249,6 +190,10 @@ front_end(const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
               << std::endl;
     std::cerr << "r_norm: " << r_norm << "r: " << r << std::endl;
     std::cerr << "t_norm: " << t_norm << "t: " << t << std::endl;
+    if (slam_params.visualize_frames) {
+      draw_feature_matches(previous_keyframe.orb_res, current_keyframe.orb_res,
+                           good_matches);
+    }
     return std::nullopt;
   }
 

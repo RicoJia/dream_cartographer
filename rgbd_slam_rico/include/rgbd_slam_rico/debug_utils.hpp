@@ -1,7 +1,6 @@
 #pragma once
 #include "rgbd_slam_rico/constants.hpp"
 #include "rgbd_slam_rico/orb_feature_detection.hpp"
-#include "rgbd_slam_rico/rgbd_rico_slam_frontend.hpp"
 #include "simple_robotics_cpp_utils/io_utils.hpp"
 #include <Eigen/Geometry>
 #include <cv_bridge/cv_bridge.h>
@@ -15,6 +14,14 @@
 #include <ros/package.h>
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
+
+#include <g2o/core/block_solver.h>
+#include <g2o/core/optimization_algorithm_levenberg.h>
+#include <g2o/core/sparse_optimizer.h>
+#include <g2o/solvers/dense/linear_solver_dense.h>
+#include <g2o/types/sba/types_sba.h>
+#include <g2o/types/sba/types_six_dof_expmap.h>
+#include <g2o/types/slam3d/types_slam3d.h>
 
 namespace RgbdSlamRico {
 
@@ -131,6 +138,22 @@ void add_point_cloud_multithreaded(const std::vector<KeyFrameData> &keyframes,
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Visualization Functions
 /////////////////////////////////////////////////////////////////////////////////////////////////
+
+void draw_feature_matches(const ORBFeatureDetectionResult &res1,
+                          const ORBFeatureDetectionResult &res2,
+                          const std::vector<cv::DMatch> &good_matches) {
+  // TODO tech-debt: This implementation could be faulty
+  cv::Mat image_with_matches, image_with_keypoints_1, image_with_keypoints_2;
+  cv::drawKeypoints(res1.image, res1.keypoints, image_with_keypoints_1,
+                    cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
+  cv::drawKeypoints(res2.image, res2.keypoints, image_with_keypoints_2,
+                    cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
+  drawMatches(image_with_keypoints_1, res1.keypoints, image_with_keypoints_2,
+              res2.keypoints, good_matches, image_with_matches,
+              cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<char>(),
+              cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+  SimpleRoboticsCppUtils::display_image(image_with_matches);
+}
 
 void visualize_slam_results(const std::vector<KeyFrameData> &keyframes,
                             ros::Publisher &poses_publisher,

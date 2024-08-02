@@ -145,8 +145,9 @@ int main(int argc, char *argv[]) {
     // so current_keyframe is invalidated
     keyframes.emplace_back(std::move(current_keyframe));
     visualize_slam_results(keyframes, poses_pub, points_pub, point_cloud);
-    // TODO
-    debug_added_keyframe_pub.publish(keyframes.back().image);
+    if (slam_params.visualize_frames) {
+      debug_added_keyframe_pub.publish(keyframes.back().image);
+    }
   } // end for
 
   // Step 10: global BA optimization (backend)
