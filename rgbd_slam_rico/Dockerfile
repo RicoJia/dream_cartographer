@@ -84,6 +84,14 @@ RUN groupadd -g ${GROUP_ID} ${USER_NAME} && \
     useradd -m -u ${USER_ID} -g ${GROUP_ID} -s /bin/bash ${USER_NAME} && \
     mkdir -p /home/${USER_NAME}/.ros && \
     chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME}
+
+# Create and add content to the .inputrc file
+RUN echo 'set editing-mode vi' >> /root/.inputrc && \
+    echo 'set keymap vi' >> /root/.inputrc && \
+    echo '"\e[A": history-search-backward' >> /root/.inputrc && \
+    echo '"\e[B": history-search-forward' >> /root/.inputrc && \
+    echo "source /opt/ros/noetic/setup.bash" >> /etc/bash.bashrc
+
 # Switch to user
 USER ${USER_NAME}
 WORKDIR /home/${USER_NAME}/dream_cartographer_ws

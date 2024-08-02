@@ -27,6 +27,15 @@ SLAMParams read_params(ros::NodeHandle nh) {
   nh.getParam("min_ransac_feature_inliers",
               slam_params.min_ransac_feature_inliers);
 
+  nh.getParam("min_interframe_translation_thre",
+              slam_params.min_interframe_translation_thre);
+  nh.getParam("min_interframe_rotation_thre",
+              slam_params.min_interframe_rotation_thre);
+  nh.getParam("max_interframe_rotation_thre",
+              slam_params.max_interframe_rotation_thre);
+  nh.getParam("max_interframe_translation_thre",
+              slam_params.max_interframe_translation_thre);
+
   nh.getParam("use_ransac_for_pnp", slam_params.use_ransac_for_pnp);
   nh.getParam("do_ba_backend", slam_params.do_ba_backend);
   nh.getParam("min_depth", slam_params.min_depth);
@@ -55,6 +64,7 @@ int main(int argc, char *argv[]) {
   ros::Publisher points_pub =
       nh.advertise<PointCloud>("optimized_points", 1, true);
   auto image_pub = ImagePub(nh, RGB_TOPIC);
+  auto debug_added_keyframe_pub = ImagePub(nh, "/debug_added_keyframe");
 
   SimpleRoboticsRosUtils::BagParser bp(nh, PACKAGE_NAME, slam_params.bag_name);
   bp.fast_forward(RGB_TOPIC, slam_params.initial_image_skip_num);
@@ -102,6 +112,15 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
+    if (slam_params.pause_after_optimization) {
+      const std::string msg =
+          "Iteration " + std::to_string(i) + ", Please hit enter pause";
+      SimpleRoboticsCppUtils::sleep_or_pause_on_keystroke(
+          SimpleRoboticsCppUtils::to_color_msg(
+              SimpleRoboticsCppUtils::ANSIStrings::RED, msg, true),
+          1500);
+    }
+
     if (slam_params.test_with_optimization) {
       auto frame1_to_frame2 =
           front_end(cam_info, slam_params, keyframes.back(), current_keyframe);
@@ -123,17 +142,11 @@ int main(int argc, char *argv[]) {
     add_point_cloud(current_keyframe.pose, current_keyframe.image,
                     current_keyframe.depth_image, cam_info, point_cloud,
                     slam_params);
-    if (slam_params.pause_after_optimization) {
-      const std::string msg =
-          "Iteration " + std::to_string(i) + ", Please hit enter pause";
-      SimpleRoboticsCppUtils::sleep_or_pause_on_keystroke(
-          SimpleRoboticsCppUtils::to_color_msg(
-              SimpleRoboticsCppUtils::ANSIStrings::RED, msg, true),
-          1500);
-    }
     // so current_keyframe is invalidated
     keyframes.emplace_back(std::move(current_keyframe));
     visualize_slam_results(keyframes, poses_pub, points_pub, point_cloud);
+    // TODO
+    debug_added_keyframe_pub.publish(keyframes.back().image);
   } // end for
 
   // Step 10: global BA optimization (backend)

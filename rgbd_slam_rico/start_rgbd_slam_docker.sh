@@ -31,6 +31,7 @@ sudo docker run --name ${IMAGE_NAME}-container --rm -e DISPLAY=$DISPLAY \
     -v ~/.ssh:/root/.ssh \
     -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_ros_utils:/home/${USER}/dream_cartographer_ws/src/simple_robotics_ros_utils \
     -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_cpp_utils:/home/${USER}/dream_cartographer_ws/src/simple_robotics_cpp_utils \
+    -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_python_utils:/home/${USER}/dream_cartographer_ws/src/simple_robotics_python_utils \
     -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_common_udev_rules:/etc/udev/rules.d \
     -v /dev/bus/usb:/dev/bus/usb \
     -v /home/${USER}/.ros:/home/rico/.ros/ \

@@ -10,24 +10,24 @@ bag_name: "/data/aura32_lobby4.bag"
 # bag_name: "/data/rgbd_dataset_freiburg3_walking_xyz_validation.bag"  
 
 initial_image_skip_num: 0 #119
-image_skip_batch_num: 3
-image_num: 400
+image_skip_batch_num: 0
+image_num: 100
 test_with_optimization: true
-pnp_method: "p3p"
+pnp_method: "ap3p"
 downsample_point_cloud: true
 # pnp_method: "p3p"
 use_ransac_for_pnp: true
 do_ba_backend: true #not effective
 min_depth: 0.2
 max_depth: 11.0
-min_ransac_feature_inliers: 10
-min_interframe_rotation_thre: 0.1 #5.72
-min_interframe_translation_thre: 0.1
-max_interframe_rotation_thre: 1.04 #60 deg
+min_ransac_feature_inliers: 6
+min_interframe_rotation_thre: 0.01 #5.72
+min_interframe_translation_thre: 0.01
+max_interframe_rotation_thre: 1.0 #60 deg
 max_interframe_translation_thre: 1.0
 # Optimization Params
 nearby_vertex_check_num: 40
-random_vertex_check_num: 200
+random_vertex_check_num: 500
 # "Cauchy", "Huber"
 robust_kernel_name: "Cauchy"
 

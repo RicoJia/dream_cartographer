@@ -1,6 +1,9 @@
 #pragma once
 
 #include "simple_robotics_cpp_utils/thread_pool.hpp"
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/point_types.h>
+#include <pcl_ros/point_cloud.h>
 #include <ros/package.h>
 
 namespace RgbdSlamRico {
@@ -12,7 +15,7 @@ constexpr auto CAMERA_INFO_TOPIC = "/camera/rgb/camera_info";
 // Initialized during runtime
 const std::string FULL_PACKAGE_PATH = ros::package::getPath(PACKAGE_NAME);
 const std::string PCD_FILE_NAME =
-    FULL_PACKAGE_PATH + "data/rgbd_rico_slam_output.pcd";
+    FULL_PACKAGE_PATH + "/data/rgbd_rico_slam_output.pcd";
 
 // Typedefs
 // Define the IO format to print on one line

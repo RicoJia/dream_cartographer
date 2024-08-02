@@ -201,8 +201,9 @@ void print_edges(const g2o::SparseOptimizer &optimizer) {
 }
 
 void save_point_cloud_to_pcd(PointCloud cloud) {
+  std::cout << "Saving pointcloud to " << PCD_FILE_NAME << std::endl;
   pcl::io::savePCDFileASCII(PCD_FILE_NAME, cloud);
-  std::cout << "Finished Saving pointcloud to " << PCD_FILE_NAME << std::endl;
+  std::cout << "Finished saving pointcloud to " << PCD_FILE_NAME << std::endl;
 }
 
 class ImagePub {

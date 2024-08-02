@@ -238,6 +238,8 @@ front_end(const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
       t_norm < slam_params.min_interframe_translation_thre) {
     std::cerr << "r and t norm are smaller than motion thresholds. Skip."
               << std::endl;
+    std::cerr << "r_norm: " << r_norm << "r: " << r << std::endl;
+    std::cerr << "t_norm: " << t_norm << "t: " << t << std::endl;
     return std::nullopt;
   }
 
@@ -245,6 +247,8 @@ front_end(const HandyCameraInfo &cam_info, const SLAMParams &slam_params,
       t_norm > slam_params.max_interframe_translation_thre) {
     std::cerr << "r and/or t norm is greater than motion thresholds. Skip."
               << std::endl;
+    std::cerr << "r_norm: " << r_norm << "r: " << r << std::endl;
+    std::cerr << "t_norm: " << t_norm << "t: " << t << std::endl;
     return std::nullopt;
   }
 
