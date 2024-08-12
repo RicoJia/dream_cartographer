@@ -2,6 +2,7 @@
 
 #include "simple_robotics_cpp_utils/cv_utils.hpp"
 #include "simple_robotics_ros_utils/rosbag_helpers.hpp"
+#include "rgbd_slam_rico_exercises/orb_exercise.hpp"
 #include <opencv2/features2d.hpp>
 #include <opencv2/opencv.hpp>
 #include <sensor_msgs/CameraInfo.h>
@@ -69,12 +70,16 @@ inline HandyCameraInfo load_camera_info(SimpleRoboticsRosUtils::BagParser &bp,
   return cam_info;
 }
 
-inline ORBFeatureDetectionResult detect_orb_features(const cv::Mat &image) {
+inline ORBFeatureDetectionResult detect_orb_features(const cv::Mat &image, const bool& use_handwritten = false) {
   cv::Ptr<cv::ORB> orb = cv::ORB::create();
   ORBFeatureDetectionResult res;
   res.image = image;
 
-  orb->detectAndCompute(image, cv::noArray(), res.keypoints, res.descriptor);
+  if (!use_handwritten)
+    orb->detectAndCompute(image, cv::noArray(), res.keypoints, res.descriptor);
+  else {
+    // handwritten_orb(image, res.keypoints, res.descriptor);
+  }
 
   return res;
 }

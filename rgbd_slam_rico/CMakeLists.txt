@@ -27,14 +27,16 @@ find_package(
              cv_bridge # cv bridge stuff
              image_transport # For pub & sub video / compressed images
              pcl_ros
-             pcl_conversions)
+             pcl_conversions
+             )
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
-find_package(g2o REQUIRED)
+find_package(g2o  REQUIRED)
+find_package(GTest REQUIRED)
 
 catkin_package(CATKIN_DEPENDS roscpp sensor_msgs cv_bridge)
 set(SIMPLE_ROBOTICS_CPP_UTILS_DIR
-    ${CMAKE_SOURCE_DIR}/../../simple_robotics_cpp_utils)
+    ${CMAKE_SOURCE_DIR}/../../SimpleRoboticsUtils/simple_robotics_cpp_utils)
 
 set(SUITESPARSE_INCLUDE_DIR /usr/include/suitesparse)
 set(SUITESPARSE_LIBRARY_DIR /usr/lib/x86_64-linux-gnu)
@@ -50,34 +52,61 @@ else()
   message(NOTICE "Found cparse library")
 endif()
 
-include_directories(${CSPARSE_INCLUDE_DIR})
 include_directories(
-  ${catkin_INCLUDE_DIRS} ${rosbag_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS}
-  ${SIMPLE_ROBOTICS_CPP_UTILS_DIR}/include ${G2O_INCLUDE_DIRS} include)
+  ${catkin_INCLUDE_DIRS}
+  ${CSPARSE_INCLUDE_DIR}
+  ${rosbag_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+  ${SIMPLE_ROBOTICS_CPP_UTILS_DIR}/include 
+  ${GTest_INCLUDE_DIRS}
+  ${G2O_INCLUDE_DIRS} 
+  include)
 
 add_subdirectory(${SIMPLE_ROBOTICS_CPP_UTILS_DIR}
                  ${CMAKE_BINARY_DIR}/simple_robotics_cpp_utils)
 add_library(${PROJECT_NAME}_dependencies INTERFACE)
 target_link_libraries(
   ${PROJECT_NAME}_dependencies
-  INTERFACE ${catkin_LIBRARIES} ${rosbag_LIBRARIES} ${OpenCV_LIBRARIES}
-            simple_robotics_cpp_utils Eigen3::Eigen ${CSPARSE_LIBRARY})
+    INTERFACE 
+    ${catkin_LIBRARIES}
+    ${rosbag_LIBRARIES}
+    ${OpenCV_LIBRARIES}
+    simple_robotics_cpp_utils
+    Eigen3::Eigen
+    ${CSPARSE_LIBRARY}
+    Threads::Threads
+    g2o::core
+    g2o::stuff
+    g2o::solver_dense
+    g2o::types_slam2d
+    g2o::types_slam3d
+    g2o::solver_eigen
+    g2o::types_sba
+    g2o::csparse_extension
+)
 
-add_executable(orb_test src/orb_test.cpp)
-target_link_libraries(orb_test ${PROJECT_NAME}_dependencies)
+# Iterate through all cpp files in the folder
+file(GLOB_RECURSE ALL_CPP_FILES "src/*cpp")
 
-add_executable(rgbd_rico_slam_mini src/rgbd_rico_slam_mini.cpp)
-target_link_libraries(
-  rgbd_rico_slam_mini
-  ${PROJECT_NAME}_dependencies
-  g2o::core
-  g2o::stuff
-  g2o::solver_dense
-  g2o::types_slam2d
-  g2o::types_slam3d
-  g2o::solver_eigen
-  g2o::types_sba
-  g2o::csparse_extension)
+# Executables
+foreach(CPP_FILE ${ALL_CPP_FILES})
+    # use the filename without extension as the executable name
+    get_filename_component(EXECUTABLE_NAME ${CPP_FILE} NAME_WE)
+    add_executable(${EXECUTABLE_NAME} ${CPP_FILE})
+    target_link_libraries(${EXECUTABLE_NAME} ${PROJECT_NAME}_dependencies)
+endforeach()
 
-add_executable(p3p_demo src/p3p_demo.cpp)
-target_link_libraries(p3p_demo ${PROJECT_NAME}_dependencies)
+# Test files
+file(GLOB_RECURSE TEST_FILES "tests/unit/*cpp")
+foreach(TEST_FILE ${TEST_FILES})
+    # NAME_WE means "name without extension"
+    get_filename_component(TEST_EXEC_NAME ${TEST_FILE} NAME_WE)
+    catkin_add_gtest(${TEST_EXEC_NAME}_test ${TEST_FILE})
+    target_link_libraries(${TEST_EXEC_NAME}_test
+        # ${catkin_LIBRARIES}
+        ${PROJECT_NAME}_dependencies
+        # gtest
+        # gtest_main
+    )
+endforeach()
+enable_testing()
