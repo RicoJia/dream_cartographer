@@ -20,9 +20,6 @@ struct ORBFeatureDetectionResult {
   bool is_null() const { return descriptor.empty() && image.empty(); }
 };
 
-/*
-TODO: this function should be moved elsewhere, maybe in simple_ros_utils
-*/
 struct HandyCameraInfo {
   cv::Mat K;
 };

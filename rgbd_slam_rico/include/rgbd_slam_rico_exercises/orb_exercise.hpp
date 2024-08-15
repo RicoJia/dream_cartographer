@@ -577,18 +577,9 @@ void handwritten_orb(const cv::Mat &image_in, std::vector<KeyPoint> &keypoints,
     // TODO
     // draw_feature_points(image, keypoints);
     compute_orientation(image, keypoints);
+    cv::Mat desc = compute_descriptor(keypoints, image);
+    cv::vconcat(descriptors, desc, descriptors);
   }
-
-  //     // Create descriptor
-  //     std::vector<Descriptor> descriptors;
-  //     for (const auto& k : keypoints) {
-  //         // Generate descriptor
-  //         Descriptor desc = round_robin_16_bit_intensity(pixels,
-  //         starting_pixel_index); descriptors.push_back(desc);
-  //     }
-
-  //     res.keypoints = std::move(keypoints);
-  //     res.descriptors = std::move(descriptors);
 }
 // https://github.com/barak/opencv/blob/051e6bb8f6641e2be38ae3051d9079c0c6d5fdd4/modules/features2d/include/opencv2/features2d/features2d.hpp#L2429-L2430
 // void match_descriptor_bruteforce(){
