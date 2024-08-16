@@ -173,8 +173,10 @@ test_orb_and_get_result(const std::string &frame_index,
 TEST(TestFeatureDetection, TestORB) {
   std::vector<ORBFeatureDetectionResult> res_vec;
   // for an ID 00 - 99
-  res_vec.push_back(test_orb_and_get_result(std::to_string(15), true));
-  res_vec.push_back(test_orb_and_get_result(std::to_string(26), true));
+  res_vec.push_back(test_orb_and_get_result(std::to_string(10), true));
+  res_vec.push_back(test_orb_and_get_result(std::to_string(11), true));
+//   res_vec.push_back(test_orb_and_get_result(std::to_string(15), true));
+//   res_vec.push_back(test_orb_and_get_result(std::to_string(26), true));
 
   // TODO
   // TODO
