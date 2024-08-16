@@ -277,11 +277,11 @@ using std::sin;
 
 constexpr const int BORDER_SIZE =
     4; // FAST Circle's radius is 3, this can be used as half_patch_size as well
-constexpr const int DESIRED_KEYPOINT_BASE_LEVEL = 40;
-constexpr const unsigned int IMAGE_PYRAMID_LEVEL_NUM = 3;
+constexpr const int DESIRED_KEYPOINT_BASE_LEVEL = 100;
+constexpr const unsigned int IMAGE_PYRAMID_LEVEL_NUM = 1;
 constexpr const double ANGLE_INCREMENT = 2 * M_PI / 40;
 constexpr const int DESCRIPTOR_LENGTH = 256 / 8;
-constexpr const int DESCRIPTOR_MAX_HAMMING_DIST = 40;
+constexpr const int DESCRIPTOR_MAX_HAMMING_DIST = 75;
 
 void cull(std::vector<KeyPoint> &keypoints, const int &desired_features_num) {
   if (keypoints.size() <= desired_features_num)
@@ -350,9 +350,9 @@ compute_keypoints(const std::vector<cv::Mat> &pyramid) {
     cv::cornerHarris(image, harris_response, harris_block_size, aperture_size,
                      k);
     for (auto &k : keypoints) {
-      auto rep_be4 = k.response;
       k.response = harris_response.at<float>(static_cast<int>(k.pt.y),
                                              static_cast<int>(k.pt.x));
+      k.size = BORDER_SIZE;
     }
     cull(keypoints, DESIRED_KEYPOINT_BASE_LEVEL);
     for (auto &k : keypoints) {
@@ -462,16 +462,16 @@ void compute_orientation(const cv::Mat &image,
  * @param y : ORB pattern point y coord
  * @return cv::Point
  */
-cv::Point rotate_point(const cv::KeyPoint &k, int x, int y,
-                       const std::vector<cv::Mat> &rotations) {
+cv::Point rotate_and_translate_point(const cv::KeyPoint &k, int x, int y,
+                                     const std::vector<cv::Mat> &rotations) {
   double theta = k.angle;
   int rotation_index =
       std::round(SimpleRoboticsCppUtils::deg2rad(theta) / ANGLE_INCREMENT);
   auto rotation_matrix = rotations.at(rotation_index);
-  cv::Matx31d point(k.pt.x, k.pt.y, 1.0);
+  cv::Matx31d point(x, y, 1.0);
   cv::Mat rotated_pt = rotation_matrix * point;
   return SimpleRoboticsCppUtils::to_cv_point(
-      {rotated_pt.at<double>(0), rotated_pt.at<double>(1)});
+      {rotated_pt.at<double>(0) + k.pt.x, rotated_pt.at<double>(1) + k.pt.y});
 }
 
 std::vector<cv::Mat> get_rotations() {
@@ -511,8 +511,8 @@ cv::Mat compute_descriptor(const std::vector<KeyPoint> &keypoints,
         int X_y = ORB_pattern.at(j * 8 + pair_id * 4 + 1);
         int Y_x = ORB_pattern.at(j * 8 + pair_id * 4 + 2);
         int Y_y = ORB_pattern.at(j * 8 + pair_id * 4 + 3);
-        auto p_X = rotate_point(k, X_x, X_y, rotations);
-        auto p_Y = rotate_point(k, Y_x, Y_y, rotations);
+        auto p_X = rotate_and_translate_point(k, X_x, X_y, rotations);
+        auto p_Y = rotate_and_translate_point(k, Y_x, Y_y, rotations);
         if (image.at<uchar>(p_X.x, p_X.y) < image.at<uchar>(p_Y.x, p_Y.y)) {
           desc_byte |= (1 << pair_id);
         }
@@ -535,7 +535,7 @@ std::vector<cv::DMatch> brute_force_matching(const cv::Mat &desc1,
   for (unsigned i = 0; i < desc1.rows; ++i) {
     // (int _queryIdx, int _trainIdx, float _distance)
     // cv::DMatch properties: queryIdx, trainIdx, distance
-    cv::DMatch match{-1, -1, 256};
+    cv::DMatch match(-1, -1, 255);
     for (unsigned j = 0; j < desc2.rows; ++j) {
       int dist = cv::norm(desc1.row(i), desc2.row(j), cv::NORM_HAMMING);
       if (dist < std::min(static_cast<int>(match.distance),
@@ -544,6 +544,9 @@ std::vector<cv::DMatch> brute_force_matching(const cv::Mat &desc1,
         match.queryIdx = i;
         match.trainIdx = j;
       }
+      //   cv::Mat r1 = desc1.row(i), r2 = desc2.row(j);
+      //   for (int j = 0; j < r1.cols; ++j)     std::cout <<
+      //   static_cast<int>(r1.at<uchar>(0, j)) << " "; // Assuming uchar type
     }
     if (match.queryIdx != -1) {
       matches.emplace_back(match); //???
@@ -562,7 +565,8 @@ std::vector<cv::DMatch> brute_force_matching(const cv::Mat &desc1,
     - Orientation is in degrees
  * @param descriptors
  */
-void handwritten_orb(const cv::Mat &image_in, std::vector<KeyPoint> &keypoints,
+void handwritten_orb(const cv::Mat &image_in,
+                     std::vector<KeyPoint> &all_keypoints_flattened,
                      cv::Mat &descriptors) {
   cv::Mat image = image_in.clone();
   // Image is converted to gray
@@ -574,11 +578,17 @@ void handwritten_orb(const cv::Mat &image_in, std::vector<KeyPoint> &keypoints,
   for (unsigned int i = 0; i < IMAGE_PYRAMID_LEVEL_NUM; ++i) {
     const auto &image = pyramid.at(i);
     auto &keypoints = all_keypoints.at(i);
+    all_keypoints_flattened.insert(all_keypoints_flattened.end(),
+                                   keypoints.begin(), keypoints.end());
     // TODO
     // draw_feature_points(image, keypoints);
     compute_orientation(image, keypoints);
     cv::Mat desc = compute_descriptor(keypoints, image);
-    cv::vconcat(descriptors, desc, descriptors);
+    if (descriptors.empty()) {
+      descriptors = desc;
+    } else {
+      cv::vconcat(descriptors, desc, descriptors);
+    }
   }
 }
 // https://github.com/barak/opencv/blob/051e6bb8f6641e2be38ae3051d9079c0c6d5fdd4/modules/features2d/include/opencv2/features2d/features2d.hpp#L2429-L2430
