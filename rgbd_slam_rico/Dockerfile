@@ -86,11 +86,11 @@ RUN groupadd -g ${GROUP_ID} ${USER_NAME} && \
     chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME}
 
 # Create and add content to the .inputrc file
-RUN echo 'set editing-mode vi' >> /root/.inputrc && \
-    echo 'set keymap vi' >> /root/.inputrc && \
-    echo '"\e[A": history-search-backward' >> /root/.inputrc && \
-    echo '"\e[B": history-search-forward' >> /root/.inputrc && \
+RUN echo '"\e[A": history-search-backward' >> /home/${USER_NAME}/.inputrc && \
+    echo '"\e[B": history-search-forward' >> /home/${USER_NAME}/.inputrc && \
     echo "source /opt/ros/noetic/setup.bash" >> /etc/bash.bashrc
+
+ENV USER_NAME=${USER_NAME}
 
 # Switch to user
 USER ${USER_NAME}

@@ -1,8 +1,8 @@
 #pragma once
 
+#include "rgbd_slam_rico_exercises/orb_exercise.hpp"
 #include "simple_robotics_cpp_utils/cv_utils.hpp"
 #include "simple_robotics_ros_utils/rosbag_helpers.hpp"
-#include "rgbd_slam_rico_exercises/orb_exercise.hpp"
 #include <opencv2/features2d.hpp>
 #include <opencv2/opencv.hpp>
 #include <sensor_msgs/CameraInfo.h>
@@ -20,9 +20,6 @@ struct ORBFeatureDetectionResult {
   bool is_null() const { return descriptor.empty() && image.empty(); }
 };
 
-/*
-TODO: this function should be moved elsewhere, maybe in simple_ros_utils
-*/
 struct HandyCameraInfo {
   cv::Mat K;
 };
@@ -70,7 +67,8 @@ inline HandyCameraInfo load_camera_info(SimpleRoboticsRosUtils::BagParser &bp,
   return cam_info;
 }
 
-inline ORBFeatureDetectionResult detect_orb_features(const cv::Mat &image, const bool& use_handwritten = false) {
+inline ORBFeatureDetectionResult
+detect_orb_features(const cv::Mat &image, const bool &use_handwritten = false) {
   cv::Ptr<cv::ORB> orb = cv::ORB::create();
   ORBFeatureDetectionResult res;
   res.image = image;
@@ -78,7 +76,8 @@ inline ORBFeatureDetectionResult detect_orb_features(const cv::Mat &image, const
   if (!use_handwritten)
     orb->detectAndCompute(image, cv::noArray(), res.keypoints, res.descriptor);
   else {
-    // handwritten_orb(image, res.keypoints, res.descriptor);
+    RgbdSlamRicoExercises::handwritten_orb(image, res.keypoints,
+                                           res.descriptor);
   }
 
   return res;

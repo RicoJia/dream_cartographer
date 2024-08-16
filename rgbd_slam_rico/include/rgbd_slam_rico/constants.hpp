@@ -31,6 +31,7 @@ ThreadPool point_cloud_addition_thread_pool(
 
 /************************************** Data Structures
  * **************************************/
+
 struct SLAMParams {
   // Data params
   std::string bag_name = "";

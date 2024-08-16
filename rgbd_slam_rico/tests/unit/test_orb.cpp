@@ -1,4 +1,5 @@
-#include "rgbd_slam_rico/constants.hpp"
+#include "rgbd_slam_rico/debug_utils.hpp"
+#include "rgbd_slam_rico/orb_feature_detection.hpp"
 #include "rgbd_slam_rico_exercises/orb_exercise.hpp"
 #include "simple_robotics_cpp_utils/cv_utils.hpp"
 #include <gtest/gtest.h>
@@ -67,14 +68,15 @@ TEST(TestFeatureDetection, TestGetRotations) {
 }
 
 TEST(TestFeatureDetection, TestRotations) {
-  cv::KeyPoint keypoint(cv::Point2f(10, 0), 1.0f);
+  cv::KeyPoint keypoint(cv::Point2f(5, 0), 1.0f);
   keypoint.angle = 90.0f; // Set angle to 90 degrees. POTENTIAL FLAKY TEST
 
   // The expected result after a 90-degree rotation around the origin
-  cv::Point expected_point(0, 10);
+  cv::Point expected_point(5, 10);
   auto rotations = get_rotations();
   // Call rotate_point
-  cv::Point rotated_point = rotate_point(keypoint, 10, 0, rotations);
+  cv::Point rotated_point =
+      rotate_and_translate_point(keypoint, 10, 0, rotations);
 
   // Check that the rotated point matches the expected point
   EXPECT_EQ(rotated_point.x, expected_point.x);
@@ -123,7 +125,7 @@ TEST(TestFeatureDetection, TestDescriptorBruteforce) {
 
   // Expected match: desc1 should match with the second descriptor in desc2
   // (same data)
-  matches = brute_force_matching(desc1, desc2);
+  std::vector<cv::DMatch> matches = brute_force_matching(desc1, desc2);
 
   // There should be exactly one match
   ASSERT_EQ(matches.size(), 1);
@@ -154,14 +156,51 @@ TEST(TestFeatureDetection, DifferentDescriptors) {
   EXPECT_GT(matches[0].distance, 0); // Because the descriptors are different
 }
 
-TEST(TestFeatureDetection, TestORB) {
+ORBFeatureDetectionResult
+test_orb_and_get_result(const std::string &frame_index,
+                        const bool use_handwritten) {
   std::string package_path = ros::package::getPath(PACKAGE_NAME);
-  auto image_path = package_path + "/data/bag_images/frame_0000.png";
+  auto image_path =
+      package_path + "/data/bag_images/frame_00" + frame_index + ".png";
   std::cout << "Using image: " << image_path << std::endl;
   auto image = cv::imread(image_path, cv::IMREAD_COLOR);
-  std::vector<KeyPoint> keypoints;
-  cv::Mat descriptors;
-  RgbdSlamRicoExercises::handwritten_orb(image, keypoints, descriptors);
+  auto res = detect_orb_features(image, use_handwritten);
+  return res;
+}
+
+// TOOD test with only 1 level. we are not handling projecting keypoints 3
+// levels on to the same one yet.
+TEST(TestFeatureDetection, TestORB) {
+  std::vector<ORBFeatureDetectionResult> res_vec;
+  // for an ID 00 - 99
+  res_vec.push_back(test_orb_and_get_result(std::to_string(10), true));
+  res_vec.push_back(test_orb_and_get_result(std::to_string(11), true));
+//   res_vec.push_back(test_orb_and_get_result(std::to_string(15), true));
+//   res_vec.push_back(test_orb_and_get_result(std::to_string(26), true));
+
+  // TODO
+  // TODO
+  std::cout << "Now displaying custom ORB + custom feature matching"
+            << std::endl;
+  auto good_matches =
+      brute_force_matching(res_vec.at(0).descriptor, res_vec.at(1).descriptor);
+  draw_feature_matches(res_vec.at(0), res_vec.at(1), good_matches);
+
+  std::cout << "Now displaying custom ORB + CV feature matching" << std::endl;
+  good_matches = find_matches(res_vec.at(0), res_vec.at(1));
+  draw_feature_matches(res_vec.at(0), res_vec.at(1), good_matches);
+
+  res_vec.push_back(test_orb_and_get_result(std::to_string(15), false));
+  res_vec.push_back(test_orb_and_get_result(std::to_string(26), false));
+
+  std::cout << "Now displaying CV ORB + custom feature matching" << std::endl;
+  good_matches =
+      brute_force_matching(res_vec.at(0).descriptor, res_vec.at(1).descriptor);
+  draw_feature_matches(res_vec.at(2), res_vec.at(3), good_matches);
+
+  std::cout << "Now displaying CV ORB + CV feature matching" << std::endl;
+  good_matches = find_matches(res_vec.at(2), res_vec.at(3));
+  draw_feature_matches(res_vec.at(2), res_vec.at(3), good_matches);
 }
 
 int main(int argc, char **argv) {
