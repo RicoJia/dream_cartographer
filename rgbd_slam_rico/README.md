@@ -15,7 +15,7 @@ source devel/setup.bash
 roslaunch rgbd_slam_rico rgbd_slam_rico.launch 
 ```
 
-4. By default, this program saves the resulting in `data/rgbd_rico_slam_output.pcd`. To visualize, one can:
+4. By default, this program saves the results in `data/rgbd_rico_slam_output.pcd`. To visualize, one can:
 
 ```bash
 python3 scripts/visualize_pointcloud_open3d.py
