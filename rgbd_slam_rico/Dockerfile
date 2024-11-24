@@ -68,23 +68,25 @@ RUN apt-get update \
     usbutils \
  && rm -rf /var/lib/apt/lists/*
 
-ENV CCACHE_DIR=/ccache
-ENV CC="ccache gcc"
-ENV CXX="ccache g++"
-ENV PATH="/usr/lib/ccache:$PATH"
-# Create the ccache directory with appropriate permissions
-RUN mkdir -p $CCACHE_DIR && chmod -R 777 $CCACHE_DIR
-
 # Create a user to match the host's UID/GID and create necessary directories
 # Ros needs to access /home/${USER_NAME}/.ros/ So we need to set up the permission properly there. 
 ARG USER_ID=1000
 ARG GROUP_ID=1000
-ARG USER_NAME
+ARG USER_NAME=$(hostname)
 RUN echo "Building as user ${USER_NAME}"
 RUN groupadd -g ${GROUP_ID} ${USER_NAME} && \
     useradd -m -u ${USER_ID} -g ${GROUP_ID} -s /bin/bash ${USER_NAME} && \
     mkdir -p /home/${USER_NAME}/.ros && \
     chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME}
+
+ENV CCACHE_DIR=/ccache
+ENV CC="ccache gcc"
+ENV CXX="ccache g++"
+ENV PATH="/usr/lib/ccache:$PATH"
+ENV CUSTOM_INSTALL_PATH="/home/${USER_NAME}/custom_installs"
+# Create the ccache directory with appropriate permissions
+RUN mkdir -p $CCACHE_DIR && chmod -R 777 $CCACHE_DIR
+# RUN mkdir -p ${CUSTOM_INSTALL_PATH}
 
 # Create and add content to the .inputrc file
 RUN echo '"\e[A": history-search-backward' >> /home/${USER_NAME}/.inputrc && \
@@ -96,3 +98,9 @@ ENV USER_NAME=${USER_NAME}
 # Switch to user
 USER ${USER_NAME}
 WORKDIR /home/${USER_NAME}/dream_cartographer_ws
+
+COPY entrypoint_rgbd_slam_docker.sh /entrypoint_rgbd_slam_docker.sh
+# RUN chmod +x /entrypoint_rgbd_slam_docker.sh
+ENTRYPOINT ["/entrypoint_rgbd_slam_docker.sh"]
+# must follow ENTRYPOINT, otherwise the container won't execute bash
+CMD ["bash"]    
