@@ -27,7 +27,7 @@ sudo docker run --name ${IMAGE_NAME}-container --rm -e DISPLAY=$DISPLAY \
     -v /etc/group:/etc/group:ro \
     -v /tmp/.X11-unix:/tmp/.X11-unix:ro \
     -v $HOME/.Xauthority:/root/.Xauthority \
-    -v /home/${USER}/file_exchange_port/dream_cartographer_ws:/home/${USER}/dream_cartographer_ws \
+    -v /home/${USER}/file_exchange_port/dream_cartographer:/home/${USER}/dream_cartographer_ws/src \
     -v ~/.ssh:/root/.ssh \
     -v ${SIMPLE_ROBOTICS_UTILS_DIR}:/home/${USER}/dream_cartographer_ws/src/SimpleRoboticsUtils \
     -v ${SIMPLE_ROBOTICS_UTILS_DIR}/simple_robotics_common_udev_rules:/etc/udev/rules.d \
