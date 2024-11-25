@@ -68,7 +68,8 @@ include_directories(
   include)
 
 link_directories($ENV{CUSTOM_INSTALL_PATH}/lib)
-add_library(${PROJECT_NAME}_dependencies INTERFACE)
+add_library(
+  ${PROJECT_NAME}_dependencies INTERFACE)
 target_link_libraries(
   ${PROJECT_NAME}_dependencies
   INTERFACE ${catkin_LIBRARIES}
