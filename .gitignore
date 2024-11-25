@@ -3,4 +3,5 @@ build/
 *bag
 *cp.cpp
 *cp.hpp
-rgbd_slam_rico/data/**
+# rgbd_slam_rico/data/**
+CMakeLists.txt

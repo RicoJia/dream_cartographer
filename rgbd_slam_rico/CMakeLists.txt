@@ -13,6 +13,8 @@ if(CCACHE_PROGRAM)
   message("Using CCache")
 endif()
 
+set(CMAKE_PREFIX_PATH "$ENV{CUSTOM_INSTALL_PATH}" ${CMAKE_PREFIX_PATH})
+
 # Find catkin macros and libraries if COMPONENTS list like find_package(catkin
 # REQUIRED COMPONENTS xyz) is used, also find other catkin packages
 find_package(
@@ -20,7 +22,6 @@ find_package(
   COMPONENTS roscpp
              # roslib is for ros::package::getPath()
              roslib
-             simple_robotics_ros_utils
              rosbag
              sensor_msgs
              geometry_msgs
@@ -28,15 +29,19 @@ find_package(
              image_transport # For pub & sub video / compressed images
              pcl_ros
              pcl_conversions
+             simple_robotics_ros_utils
              )
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(g2o  REQUIRED)
 find_package(GTest REQUIRED)
-
+find_library(DL_LIB dl REQUIRED)
+             
 catkin_package(CATKIN_DEPENDS roscpp sensor_msgs cv_bridge)
-set(SIMPLE_ROBOTICS_CPP_UTILS_DIR
-    ${CMAKE_SOURCE_DIR}/../../SimpleRoboticsUtils/simple_robotics_cpp_utils)
+
+if(NOT DEFINED ENV{CUSTOM_INSTALL_PATH})
+  message(FATAL_ERROR "CUSTOM_INSTALL_PATH environment variable is not set.")
+endif()
 
 set(SUITESPARSE_INCLUDE_DIR /usr/include/suitesparse)
 set(SUITESPARSE_LIBRARY_DIR /usr/lib/x86_64-linux-gnu)
@@ -57,21 +62,22 @@ include_directories(
   ${CSPARSE_INCLUDE_DIR}
   ${rosbag_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
-  ${SIMPLE_ROBOTICS_CPP_UTILS_DIR}/include 
+  $ENV{CUSTOM_INSTALL_PATH}/include
+#   ${SIMPLE_ROBOTICS_CPP_UTILS_DIR}/include 
   ${GTest_INCLUDE_DIRS}
   ${G2O_INCLUDE_DIRS} 
   include)
 
-add_subdirectory(${SIMPLE_ROBOTICS_CPP_UTILS_DIR}
-                 ${CMAKE_BINARY_DIR}/simple_robotics_cpp_utils)
+link_directories($ENV{CUSTOM_INSTALL_PATH}/lib)
 add_library(${PROJECT_NAME}_dependencies INTERFACE)
 target_link_libraries(
   ${PROJECT_NAME}_dependencies
     INTERFACE 
     ${catkin_LIBRARIES}
     ${rosbag_LIBRARIES}
-    ${OpenCV_LIBRARIES}
+    # simple_robotics_cpp_utils depend on OpenCV. So it MUST come before it
     simple_robotics_cpp_utils
+    ${OpenCV_LIBRARIES}
     Eigen3::Eigen
     ${CSPARSE_LIBRARY}
     Threads::Threads
@@ -83,6 +89,7 @@ target_link_libraries(
     g2o::solver_eigen
     g2o::types_sba
     g2o::csparse_extension
+    ${DL_LIB}  # Add this line to link libdl
 )
 
 # Iterate through all cpp files in the folder
