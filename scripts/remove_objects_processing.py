@@ -7,6 +7,7 @@ from tqdm import tqdm
 import numpy as np
 import os
 import sys
+import argparse
 
 from simple_robotics_python_utils.common.ros1bag_ros2bag_conversions import (
     read_ros1_do_stuff_save_ros1,
@@ -71,6 +72,12 @@ def post_process_image(msg, bench, visualize):
         plt.show()
     return msg
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--visualize", "-v", action="store_true", default=False, help="Enable visualization as data masking takes place")
+    args = parser.parse_args()
+    return args
+
 
 if __name__ == "__main__":
 
@@ -80,13 +87,13 @@ if __name__ == "__main__":
     else:
         print(f"Python 3.10 is required, aborted, sorry! 😭")
 
-    # TODO: can make this a context manager
+    args = parse_args()
     WORKSPACE_PATH = os.path.dirname(os.path.abspath(os.getcwd()))
     input_path = os.path.join(
         WORKSPACE_PATH, "rgbd_slam_rico/data", "rgbd_dataset_freiburg1_xyz.bag"
     )
     output_path = input_path + ".processed"
-    print(f"Rico: {output_path}")
+    print(f"Outputting to: {output_path}")
 
     RGB_TOPIC = "/camera/rgb/image_raw"
 
@@ -96,7 +103,7 @@ if __name__ == "__main__":
         output_path=output_path,
         do_stuff={
             "/camera/rgb/image_color": functools.partial(
-                post_process_image, bench=bench, visualize=False
+                post_process_image, bench=bench, visualize=args.visualize
             )
         },
     )
