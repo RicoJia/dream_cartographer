@@ -56,7 +56,7 @@ The result is not perfect, one can still see diluted human figures. This is usin
 <div style="text-align: center;">
     <p align="center">
        <figure>
-            <img src="https://github.com/user-attachments/assets/be810c8b-8f5d-473f-be83-8a3a75c922fe" height="300" alt=""/>
+            <img src="https://github.com/user-attachments/assets/f44fac2a-a46d-4f83-9869-8c022545e338" height="300" alt=""/>
        </figure>
     </p>
 </div>
