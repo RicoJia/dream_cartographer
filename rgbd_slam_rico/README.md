@@ -65,7 +65,7 @@ Overall:
 <div style="text-align: center;">
     <p align="center">
        <figure>
-            <img src="https://github.com/user-attachments/assets/f44fac2a-a46d-4f83-9869-8c022545e338" height="200" alt="" />
+            <img src="https://github.com/user-attachments/assets/d81aec5b-91d7-45b1-9480-d4e71f169864" height="300" alt=""/>
        </figure>
     </p>
 </div>
