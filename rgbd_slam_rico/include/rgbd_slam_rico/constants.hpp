@@ -66,6 +66,7 @@ struct SLAMParams {
 
   bool save_pcd_file = false;
   bool filter_out_dark_pixels = false;
+  int inflation_pixels = 0;
 };
 
 struct FrontEndData {

@@ -46,6 +46,7 @@ SLAMParams read_params(ros::NodeHandle nh) {
   nh.getParam("initial_image_skip_num", slam_params.initial_image_skip_num);
   nh.getParam("save_pcd_file", slam_params.save_pcd_file);
   nh.getParam("filter_out_dark_pixels", slam_params.filter_out_dark_pixels);
+  nh.getParam("inflation_pixels", slam_params.inflation_pixels);
 
   LOG_S(INFO) << "Done Reading Params";
   return slam_params;
