@@ -55,8 +55,17 @@ The result is not perfect, one can still see diluted human figures. This is usin
 
 <div style="text-align: center;">
     <p align="center">
+        <img src="https://github.com/user-attachments/assets/2010269c-471b-44ad-a0bd-16944d26e54a" height="200" alt="" style="display: inline-block;"/>
+        <img src="https://github.com/user-attachments/assets/7c7c0dde-260a-46ee-ae15-60b17682f38c" height="200" alt="" style="display: inline-block;"/>
+    </p>
+</div>
+
+Overall:
+
+<div style="text-align: center;">
+    <p align="center">
        <figure>
-            <img src="https://github.com/user-attachments/assets/f44fac2a-a46d-4f83-9869-8c022545e338" height="300" alt=""/>
+            <img src="https://github.com/user-attachments/assets/f44fac2a-a46d-4f83-9869-8c022545e338" height="200" alt="" />
        </figure>
     </p>
 </div>
@@ -65,8 +74,12 @@ The result is not perfect, one can still see diluted human figures. This is usin
 
 Without Optimization, the raw inputs are RGB and Depth images (which visualizes into a mumble jumble :/). The scene looks like below:
 
-<img src="https://github.com/user-attachments/assets/31545387-b3b3-4b33-8fd0-9f1d5d6f4801" alt="Image 1" style="width:45%; display: inline-block;"/>
-<img src="https://github.com/user-attachments/assets/e3de1652-795b-4277-bc34-885f74a40597" alt="Image 1" style="width:45%; display: inline-block;"/>
+<div style="text-align: center;">
+<p align="center">
+            <img src="https://github.com/user-attachments/assets/31545387-b3b3-4b33-8fd0-9f1d5d6f4801" height="200" alt=""  style="display: inline-block;"/>
+            <img src="https://github.com/user-attachments/assets/e3de1652-795b-4277-bc34-885f74a40597" height="200" alt=""  style="display: inline-block;"/>
+</p>
+</div>
 
 This mini RGBD SLAM system first performs the front end, then the backend. It's not parallelized, or partially implemented on a GPU (My laptop has an Intel i5 core with no GPU, that's why). Well, it's a proof of concept mostly for learning purposes still. The
 

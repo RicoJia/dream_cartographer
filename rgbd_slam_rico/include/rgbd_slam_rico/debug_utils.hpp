@@ -43,6 +43,29 @@ PointCloud::Ptr initialize_point_cloud() {
 void clear_pointcloud(PointCloud::Ptr point_cloud) { point_cloud->clear(); }
 
 /**
+ * @brief Check a pixel's neighborhood with radius inflation_pixels for any pure
+ dark pixel. If so, return true.
+ *
+ */
+bool any_neighbor_pixel_is_dark(const cv::Mat &image, const float u,
+                                const float v, const int &inflation_pixels) {
+  for (int y = -inflation_pixels; y < inflation_pixels; ++y) {
+    for (int x = -inflation_pixels; x < inflation_pixels; ++x) {
+      int neighbor_u = u + x;
+      int neighbor_v = v + y;
+      if (neighbor_u < 0 || neighbor_u >= image.cols)
+        continue;
+      if (neighbor_v < 0 || neighbor_v >= image.rows)
+        continue;
+      cv::Vec3b neighbor_bgr = image.at<cv::Vec3b>(neighbor_v, neighbor_u);
+      if (neighbor_bgr[2] == 0 && neighbor_bgr[1] == 0 && neighbor_bgr[0] == 0)
+        return true;
+    }
+  }
+  return false;
+}
+
+/**
  * @brief "Generally thread safe" function to perform the proper pose transforms
  on the current point cloud. Technically, all arguments should be immutables
  across all threads to ensure absolute thread safety
@@ -89,6 +112,10 @@ process_current_pointcloud(const Eigen::Isometry3d &world_to_cam,
       pcl_point.g = bgr[1];
       pcl_point.b = bgr[0];
       if (slam_params.filter_out_dark_pixels) {
+        if (any_neighbor_pixel_is_dark(image, u, v,
+                                       slam_params.inflation_pixels))
+          continue;
+
         if (pcl_point.r == 0 && pcl_point.g == 0 && pcl_point.b == 0) {
           continue;
         }
