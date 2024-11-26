@@ -88,6 +88,11 @@ process_current_pointcloud(const Eigen::Isometry3d &world_to_cam,
       pcl_point.r = bgr[2];
       pcl_point.g = bgr[1];
       pcl_point.b = bgr[0];
+      if (slam_params.filter_out_dark_pixels) {
+        if (pcl_point.r == 0 && pcl_point.g == 0 && pcl_point.b == 0) {
+          continue;
+        }
+      }
       current_cloud->points.emplace_back(std::move(pcl_point));
     }
   }
@@ -144,9 +149,11 @@ void draw_feature_matches(const ORBFeatureDetectionResult &res1,
                           const std::vector<cv::DMatch> &good_matches) {
   // TODO tech-debt: This implementation could be faulty
   cv::Mat image_with_matches, image_with_keypoints_1, image_with_keypoints_2;
-  // cv::cvtColor(image, image, cv::COLOR_GRAY2BGR); // or another appropriate conversion
-  cv::drawKeypoints(res1.image, res1.keypoints, image_with_keypoints_1,
-                    cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);    // Needs CV_8UC3, that is, needs 
+  // cv::cvtColor(image, image, cv::COLOR_GRAY2BGR); // or another appropriate
+  // conversion
+  cv::drawKeypoints(
+      res1.image, res1.keypoints, image_with_keypoints_1, cv::Scalar::all(-1),
+      cv::DrawMatchesFlags::DEFAULT); // Needs CV_8UC3, that is, needs
   cv::drawKeypoints(res2.image, res2.keypoints, image_with_keypoints_2,
                     cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
   drawMatches(image_with_keypoints_1, res1.keypoints, image_with_keypoints_2,

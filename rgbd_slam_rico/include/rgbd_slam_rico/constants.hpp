@@ -65,6 +65,7 @@ struct SLAMParams {
   int pnp_method_enum = 0;
 
   bool save_pcd_file = false;
+  bool filter_out_dark_pixels = false;
 };
 
 struct FrontEndData {
