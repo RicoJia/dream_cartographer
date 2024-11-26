@@ -3,6 +3,7 @@
 This repo contains my implementation of a mini RGBD SLAM system, inspired by [RGBD SLAM v2 from Endres et al.](https://felixendres.github.io/rgbdslam_v2/)
 
 ## Usage
+
 1. Build the docker image `docker build --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) -t dream-rgbd-rico .`
 
 2. Start the docker container: `./start_rgbd_slam_docker.sh`
@@ -23,7 +24,7 @@ python3 scripts/visualize_pointcloud_open3d.py
 
 - Rviz is not being used because it's less CPU-friendly and crashes often.
 
-5. There's a script for recording rosbags. 
+5. There's a script for recording rosbags.
 
 - `roslaunch realsense2_camera rs_camera.launch align_depth:=true`. It listens to the topic there
 - `python3 scripts/record_realsense_topics_in_bag.py`
@@ -50,6 +51,16 @@ pip3 install ricomodels
 python3 scripts/remove_objects_processing.py
 ```
 
+The result is not perfect, one can still see diluted human figures. This is using PyTorch's DeepLabV3+ model. Dataset: Sequence 'freiburg3_sitting_static'
+
+<div style="text-align: center;">
+    <p align="center">
+       <figure>
+            <img src="https://github.com/user-attachments/assets/be810c8b-8f5d-473f-be83-8a3a75c922fe" height="300" alt=""/>
+       </figure>
+    </p>
+</div>
+
 ## Results
 
 Without Optimization, the raw inputs are RGB and Depth images (which visualizes into a mumble jumble :/). The scene looks like below:
@@ -57,7 +68,7 @@ Without Optimization, the raw inputs are RGB and Depth images (which visualizes 
 <img src="https://github.com/user-attachments/assets/31545387-b3b3-4b33-8fd0-9f1d5d6f4801" alt="Image 1" style="width:45%; display: inline-block;"/>
 <img src="https://github.com/user-attachments/assets/e3de1652-795b-4277-bc34-885f74a40597" alt="Image 1" style="width:45%; display: inline-block;"/>
 
-This mini RGBD SLAM system first performs the front end, then the backend. It's not parallelized, or partially implemented on a GPU (My laptop has an Intel i5 core with no GPU, that's why). Well, it's a proof of concept mostly for learning purposes still. The 
+This mini RGBD SLAM system first performs the front end, then the backend. It's not parallelized, or partially implemented on a GPU (My laptop has an Intel i5 core with no GPU, that's why). Well, it's a proof of concept mostly for learning purposes still. The
 
 Below image shows the final result after:
 

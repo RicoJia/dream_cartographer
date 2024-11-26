@@ -1,4 +1,6 @@
-bag_name: "/data/rgbd_dataset_freiburg1_xyz.bag.processed"
+# bag_name: "/data/rgbd_dataset_freiburg1_xyz.bag.processed"
+bag_name: "/data/rgbd_dataset_freiburg3_sitting_static.bag.processed"
+
 
 initial_image_skip_num: 0 #119
 image_skip_batch_num: 0

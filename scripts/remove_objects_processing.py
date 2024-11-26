@@ -26,7 +26,7 @@ def post_process_image(msg, bench, visualize):
         # image = np.frombuffer(data, np.uint8).reshape((height, width, 3))
         image = np.frombuffer(data, np.uint8).reshape((height, width, 3))
     elif encoding == "bgr8":
-        image = np.frombuffer(data, np.uint8).reshape((height, width, 3))
+        image = np.frombuffer(data, np.uint8).reshape((height, width, 3))[:, :, ::-1]
     elif encoding == "mono8":
         image = np.frombuffer(data, np.uint8).reshape((height, width))
     else:
@@ -72,9 +72,23 @@ def post_process_image(msg, bench, visualize):
         plt.show()
     return msg
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--visualize", "-v", action="store_true", default=False, help="Enable visualization as data masking takes place")
+    parser.add_argument(
+        "--visualize",
+        "-v",
+        action="store_true",
+        default=False,
+        help="Enable visualization as data masking takes place",
+    )
+    parser.add_argument(
+        "--name",
+        "-n",
+        type=str,
+        required=True,
+        help="Name of a bag in rgbd_slam_rico/data",
+    )
     args = parser.parse_args()
     return args
 
@@ -89,10 +103,10 @@ if __name__ == "__main__":
 
     args = parse_args()
     WORKSPACE_PATH = os.path.dirname(os.path.abspath(os.getcwd()))
-    input_path = os.path.join(
-        WORKSPACE_PATH, "rgbd_slam_rico/data", "rgbd_dataset_freiburg1_xyz.bag"
-    )
+    input_path = os.path.join(WORKSPACE_PATH, "rgbd_slam_rico/data", args.name)
     output_path = input_path + ".processed"
+    if os.path.exists(output_path):
+        os.remove(output_path)
     print(f"Outputting to: {output_path}")
 
     RGB_TOPIC = "/camera/rgb/image_raw"
