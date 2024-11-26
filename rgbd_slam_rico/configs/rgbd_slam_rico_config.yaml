@@ -1,12 +1,4 @@
-# bag_name: "/data/aura32_lobby4.bag"
-bag_name: "/data/rgbd_dataset_freiburg1_xyz.bag"
-# bag_name: "/data/rgbd_dataset_freiburg3_long_office_household.bag"  #too static, ok
-# bag_name: "/data/rgbd_dataset_freiburg1_rpy.bag"  # too static, ok
-# bag_name: "/data/rgbd_dataset_freiburg1_desk2.bag"  # barely ok
-# bag_name: "/data/rgbd_dataset_freiburg1_floor.bag"  #good
-# bag_name: "/data/rgbd_dataset_freiburg3_sitting_halfsphere_validation.bag"  # There's a person moving his head. So image is blurry
-# bag_name: "/data/rgbd_dataset_freiburg3_walking_rpy_validation.bag"  
-# bag_name: "/data/rgbd_dataset_freiburg2_desk_with_person.bag"  
+bag_name: "/data/rgbd_dataset_freiburg1_xyz.bag.processed"
 
 initial_image_skip_num: 0 #119
 image_skip_batch_num: 0
