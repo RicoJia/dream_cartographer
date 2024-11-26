@@ -28,6 +28,10 @@ python3 scripts/visualize_pointcloud_open3d.py
 - `roslaunch realsense2_camera rs_camera.launch align_depth:=true`. It listens to the topic there
 - `python3 scripts/record_realsense_topics_in_bag.py`
 
+## Dependencies
+
+- [SimpleRobotics](https://github.com/RicoJia/SimpleRoboticsUtils)
+
 ## Implementation Notes
 
 [I wrote a blog series about the theory and implementation of this VSLAM system](https://ricojia.github.io/2024/07/09/rgbd-slam-pnp.html)
@@ -36,6 +40,15 @@ python3 scripts/visualize_pointcloud_open3d.py
 
 The benchmarking dataset comes from the [TUM dataset](https://cvg.cit.tum.de/data/datasets/rgbd-dataset).
 According to the [download page](https://cvg.cit.tum.de/data/datasets/rgbd-dataset/download). The true trajectory is also provided (It's a TODO for now)
+
+## Additional Tools
+
+**In a Python 3.10 environment** (which unfortunately is not the docker container provided, due to ROS1 Noetic constraints), there is a tool that can mask out humans. To use it:
+
+```bash
+pip3 install ricomodels
+python3 scripts/remove_objects_processing.py
+```
 
 ## Results
 
