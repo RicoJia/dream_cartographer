@@ -58,7 +58,7 @@ RUN apt-get update && apt-get install -y \
     gdb \
     libsuitesparse-dev
 
-RUN pip3 install open3d 
+RUN pip3 install open3d
 
 # usbutils is for lsusb
 RUN apt-get update \
