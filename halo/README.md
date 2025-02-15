@@ -1,1 +1,0 @@
-# HALO (Hybrid Autonomous Localization & Observation)
